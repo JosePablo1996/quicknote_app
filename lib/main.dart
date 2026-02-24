@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'screens/note_list_screen.dart';
+import 'screens/splash_screen.dart'; // Importar el splash screen
+// import 'screens/note_list_screen.dart'; // Ya no es necesario aquí
 
 void main() {
   runApp(const QuickNoteApp());
@@ -25,7 +26,7 @@ class QuickNoteApp extends StatelessWidget {
           foregroundColor: Colors.white,
         ),
       ),
-      home: const NoteListScreen(),
+      home: const SplashScreen(), // 👈 Ahora inicia con SplashScreen
     );
   }
 }

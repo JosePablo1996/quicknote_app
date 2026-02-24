@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/note.dart';
 import '../services/api_service.dart';
+import '../utils/snackbar_utils.dart'; // ✅ IMPORTAR SNACKBAR UTILS
 
 class NoteFormScreen extends StatefulWidget {
   final Note? note;
@@ -44,11 +45,10 @@ class _NoteFormScreenState extends State<NoteFormScreen> {
             _contentController.text.trim(),
           );
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Nota creada exitosamente'),
-                backgroundColor: Colors.green,
-              ),
+            // ✅ SECCIÓN 1: Snackbar de éxito al crear
+            SnackbarUtils.showSuccessSnackbar(
+              context, 
+              'Nota creada exitosamente'
             );
           }
         } else {
@@ -59,11 +59,10 @@ class _NoteFormScreenState extends State<NoteFormScreen> {
             _contentController.text.trim(),
           );
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Nota actualizada exitosamente'),
-                backgroundColor: Colors.blue,
-              ),
+            // ✅ SECCIÓN 2: Snackbar de información al actualizar
+            SnackbarUtils.showInfoSnackbar(
+              context, 
+              'Nota actualizada exitosamente'
             );
           }
         }
@@ -73,11 +72,10 @@ class _NoteFormScreenState extends State<NoteFormScreen> {
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error: $e'),
-              backgroundColor: Colors.red,
-            ),
+          // ✅ SECCIÓN 3: Snackbar de error
+          SnackbarUtils.showErrorSnackbar(
+            context, 
+            'Error: $e'
           );
         }
       } finally {

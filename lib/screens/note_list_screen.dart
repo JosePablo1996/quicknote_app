@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../models/note.dart';
 import '../services/api_service.dart';
 import '../widgets/note_card.dart';
+import '../widgets/empty_notes_widget.dart';
+import '../utils/snackbar_utils.dart'; // ✅ IMPORTAR SNACKBAR UTILS
 import 'note_form_screen.dart';
 import 'note_detail_screen.dart';
 
@@ -15,11 +17,21 @@ class NoteListScreen extends StatefulWidget {
 class _NoteListScreenState extends State<NoteListScreen> {
   final ApiService _apiService = ApiService();
   late Future<List<Note>> _futureNotes;
+  
+  // Controlador para búsqueda (futura implementación)
+  final TextEditingController _searchController = TextEditingController();
+  bool _isSearching = false;
 
   @override
   void initState() {
     super.initState();
     _loadNotes();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   void _loadNotes() {
@@ -34,14 +46,26 @@ class _NoteListScreenState extends State<NoteListScreen> {
       builder: (context) => AlertDialog(
         title: const Text('Eliminar nota'),
         content: Text('¿Estás seguro de eliminar "${note.title}"?'),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.grey,
+            ),
             child: const Text('Cancelar'),
           ),
-          TextButton(
+          ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
             child: const Text('Eliminar'),
           ),
         ],
@@ -53,35 +77,77 @@ class _NoteListScreenState extends State<NoteListScreen> {
         await _apiService.deleteNote(note.id);
         _loadNotes();
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Nota eliminada'),
-              backgroundColor: Colors.orange,
-            ),
+          // ✅ SECCIÓN 1: Snackbar de éxito al eliminar
+          SnackbarUtils.showSuccessSnackbar(
+            context, 
+            '"${note.title}" eliminada'
           );
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error: $e'),
-              backgroundColor: Colors.red,
-            ),
+          // ✅ SECCIÓN 2: Snackbar de error al eliminar
+          SnackbarUtils.showErrorSnackbar(
+            context, 
+            'Error al eliminar: $e'
           );
         }
       }
     }
   }
 
+  void _showSearch() {
+    setState(() {
+      _isSearching = true;
+    });
+  }
+
+  void _hideSearch() {
+    setState(() {
+      _isSearching = false;
+      _searchController.clear();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('QuickNote'),
+        title: _isSearching
+            ? TextField(
+                controller: _searchController,
+                autofocus: true,
+                decoration: InputDecoration(
+                  hintText: 'Buscar notas...',
+                  border: InputBorder.none,
+                  hintStyle: const TextStyle(color: Colors.white70),
+                  prefixIcon: const Icon(Icons.search, color: Colors.white),
+                  suffixIcon: IconButton(
+                    icon: const Icon(Icons.clear, color: Colors.white),
+                    onPressed: _hideSearch,
+                  ),
+                ),
+                style: const TextStyle(color: Colors.white),
+                onChanged: (query) {
+                  // Aquí implementaremos búsqueda en tiempo real después
+                },
+              )
+            : const Text(
+                'QuickNote',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1,
+                ),
+              ),
         backgroundColor: Colors.blue,
         foregroundColor: Colors.white,
-        elevation: 2,
+        elevation: 4,
         actions: [
+          if (!_isSearching)
+            IconButton(
+              icon: const Icon(Icons.search),
+              onPressed: _showSearch,
+              tooltip: 'Buscar',
+            ),
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: _loadNotes,
@@ -90,73 +156,118 @@ class _NoteListScreenState extends State<NoteListScreen> {
         ],
       ),
       body: RefreshIndicator(
-        onRefresh: () async => _loadNotes(),
+        onRefresh: () async {
+          await Future.delayed(const Duration(seconds: 1));
+          _loadNotes();
+        },
+        color: Colors.blue,
+        backgroundColor: Colors.white,
+        displacement: 40,
         child: FutureBuilder<List<Note>>(
           future: _futureNotes,
           builder: (context, snapshot) {
+            // Estado de carga
             if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
-            }
-
-            if (snapshot.hasError) {
               return Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.error, color: Colors.red, size: 60),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Error: ${snapshot.error}',
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(color: Colors.red),
+                    CircularProgressIndicator(
+                      color: Colors.blue,
+                      strokeWidth: 3,
                     ),
-                    const SizedBox(height: 16),
-                    ElevatedButton(
-                      onPressed: _loadNotes,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue,
+                    const SizedBox(height: 20),
+                    Text(
+                      'Cargando tus notas...',
+                      style: TextStyle(
+                        color: Colors.grey[600],
+                        fontSize: 16,
                       ),
-                      child: const Text('Reintentar'),
                     ),
                   ],
+                ),
+              );
+            }
+
+            // Estado de error
+            if (snapshot.hasError) {
+              return Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          color: Colors.red.shade50,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          Icons.error_outline,
+                          size: 60,
+                          color: Colors.red.shade400,
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      Text(
+                        '¡Ups! Algo salió mal',
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.grey[800],
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        '${snapshot.error}',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: Colors.grey[600],
+                          fontSize: 14,
+                        ),
+                      ),
+                      const SizedBox(height: 30),
+                      ElevatedButton.icon(
+                        onPressed: _loadNotes,
+                        icon: const Icon(Icons.refresh),
+                        label: const Text('Reintentar'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.blue,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 30,
+                            vertical: 15,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(30),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               );
             }
 
             final notes = snapshot.data ?? [];
             
+            // ESTADO VACÍO - usando nuestro nuevo widget
             if (notes.isEmpty) {
-              return Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.note_alt_outlined,
-                      size: 80,
-                      color: Colors.grey[400],
+              return EmptyNotesWidget(
+                onCreateNote: () async {
+                  final result = await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const NoteFormScreen(),
                     ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'No hay notas',
-                      style: TextStyle(
-                        fontSize: 20,
-                        color: Colors.grey[600],
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      '¡Crea tu primera nota!',
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.grey[500],
-                      ),
-                    ),
-                  ],
-                ),
+                  );
+                  if (result == true) _loadNotes();
+                },
               );
             }
 
+            // LISTA DE NOTAS
             return ListView.builder(
               padding: const EdgeInsets.only(top: 8, bottom: 80),
               itemCount: notes.length,
@@ -167,16 +278,32 @@ class _NoteListScreenState extends State<NoteListScreen> {
                   onTap: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(
-                        builder: (context) => NoteDetailScreen(note: note),
+                      PageRouteBuilder(
+                        pageBuilder: (_, __, ___) => NoteDetailScreen(note: note),
+                        transitionsBuilder: (_, animation, __, child) {
+                          return FadeTransition(
+                            opacity: animation,
+                            child: child,
+                          );
+                        },
+                        transitionDuration: const Duration(milliseconds: 300),
                       ),
                     );
                   },
                   onEdit: () async {
                     final result = await Navigator.push(
                       context,
-                      MaterialPageRoute(
-                        builder: (context) => NoteFormScreen(note: note),
+                      PageRouteBuilder(
+                        pageBuilder: (_, __, ___) => NoteFormScreen(note: note),
+                        transitionsBuilder: (_, animation, __, child) {
+                          return SlideTransition(
+                            position: Tween<Offset>(
+                              begin: const Offset(1, 0),
+                              end: Offset.zero,
+                            ).animate(animation),
+                            child: child,
+                          );
+                        },
                       ),
                     );
                     if (result == true) _loadNotes();
@@ -192,8 +319,14 @@ class _NoteListScreenState extends State<NoteListScreen> {
         onPressed: () async {
           final result = await Navigator.push(
             context,
-            MaterialPageRoute(
-              builder: (context) => const NoteFormScreen(),
+            PageRouteBuilder(
+              pageBuilder: (_, __, ___) => const NoteFormScreen(),
+              transitionsBuilder: (_, animation, __, child) {
+                return ScaleTransition(
+                  scale: animation,
+                  child: child,
+                );
+              },
             ),
           );
           if (result == true) _loadNotes();
