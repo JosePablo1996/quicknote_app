@@ -262,7 +262,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
           const SizedBox(height: 20),
 
-          // SECCIÓN: ACERCA DE (SIN TRADUCCIONES)
+          // SECCIÓN: ACERCA DE
           _buildSectionHeader('Acerca de', isDarkMode),
           _buildGlassCard(
             child: Column(
@@ -270,16 +270,35 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 _buildSettingsTile(
                   icon: Icons.info,
                   title: 'Versión',
-                  subtitle: 'QuickNote v2.0.0',
+                  subtitle: 'QuickNote v2.1.0',
                   isDarkMode: isDarkMode,
                   showArrow: false,
                 ),
                 _buildSettingsTile(
-                  icon: Icons.code,
-                  title: 'Desarrollador',
-                  subtitle: 'Pablo Miranda',
+                  icon: Icons.favorite,
+                  title: 'Desarrollado con ❤️ por',
+                  subtitle: 'Jose Pablo Miranda',
                   isDarkMode: isDarkMode,
                   showArrow: false,
+                ),
+                _buildSettingsTile(
+                  icon: Icons.update,
+                  title: 'Registro de cambios',
+                  subtitle: 'Ver novedades de la versión',
+                  isDarkMode: isDarkMode,
+                  onTap: () {
+                    // Aquí irá la navegación al registro de cambios
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: const Text('Registro de cambios - Próximamente'),
+                        backgroundColor: Colors.blue,
+                        behavior: SnackBarBehavior.floating,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                    );
+                  },
                 ),
                 _buildSettingsTile(
                   icon: Icons.description,
@@ -289,11 +308,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 _buildSettingsTile(
                   icon: Icons.privacy_tip,
                   title: 'Política de privacidad',
-                  isDarkMode: isDarkMode,
-                ),
-                _buildSettingsTile(
-                  icon: Icons.star,
-                  title: 'Calificar la aplicación',
                   isDarkMode: isDarkMode,
                 ),
               ],
@@ -390,6 +404,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     Widget? trailing,
     required bool isDarkMode,
     bool showArrow = true,
+    VoidCallback? onTap,
   }) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -452,7 +467,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                   )
                 : null),
-        onTap: showArrow ? () {} : null,
+        onTap: onTap ?? (showArrow ? () {} : null),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(15),
         ),
