@@ -3,7 +3,10 @@ import '../models/note.dart';
 import '../services/api_service.dart';
 import '../widgets/note_card.dart';
 import '../widgets/empty_notes_widget.dart';
-import '../utils/snackbar_utils.dart'; // ✅ IMPORTAR SNACKBAR UTILS
+import '../widgets/custom_header.dart';
+import '../widgets/note_menu.dart';
+import '../widgets/left_menu.dart';
+import '../utils/snackbar_utils.dart';
 import 'note_form_screen.dart';
 import 'note_detail_screen.dart';
 
@@ -18,9 +21,15 @@ class _NoteListScreenState extends State<NoteListScreen> {
   final ApiService _apiService = ApiService();
   late Future<List<Note>> _futureNotes;
   
-  // Controlador para búsqueda (futura implementación)
+  // Controlador para búsqueda
   final TextEditingController _searchController = TextEditingController();
   bool _isSearching = false;
+  
+  // Categoría seleccionada
+  String _selectedCategory = 'Todas';
+  
+  // Controlador para el menú izquierdo
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   @override
   void initState() {
@@ -77,7 +86,6 @@ class _NoteListScreenState extends State<NoteListScreen> {
         await _apiService.deleteNote(note.id);
         _loadNotes();
         if (mounted) {
-          // ✅ SECCIÓN 1: Snackbar de éxito al eliminar
           SnackbarUtils.showSuccessSnackbar(
             context, 
             '"${note.title}" eliminada'
@@ -85,7 +93,6 @@ class _NoteListScreenState extends State<NoteListScreen> {
         }
       } catch (e) {
         if (mounted) {
-          // ✅ SECCIÓN 2: Snackbar de error al eliminar
           SnackbarUtils.showErrorSnackbar(
             context, 
             'Error al eliminar: $e'
@@ -108,211 +115,433 @@ class _NoteListScreenState extends State<NoteListScreen> {
     });
   }
 
+  // Métodos para el menú derecho
+  void _onViewList() {
+    SnackbarUtils.showInfoSnackbar(context, 'Cambiar vista');
+  }
+
+  void _onSelect() {
+    SnackbarUtils.showInfoSnackbar(context, 'Seleccionar notas');
+  }
+
+  void _onSort() {
+    SnackbarUtils.showInfoSnackbar(context, 'Ordenar notas');
+  }
+
+  void _onSync() {
+    SnackbarUtils.showInfoSnackbar(context, 'Sincronizando...');
+    _loadNotes();
+  }
+
+  void _onImport() {
+    SnackbarUtils.showInfoSnackbar(context, 'Importar notas');
+  }
+
+  // Métodos para el menú izquierdo
+  void _openLeftMenu() {
+    _scaffoldKey.currentState?.openDrawer();
+  }
+
+  void _closeLeftMenu() {
+    Navigator.pop(context);
+  }
+
+  // Método para obtener color basado en el ID
+  Color _getNoteColor(Note note) {
+    final List<Color> colors = [
+      Colors.blue,
+      Colors.red,
+      Colors.green,
+      Colors.orange,
+      Colors.purple,
+      Colors.teal,
+      Colors.pink,
+      Colors.indigo,
+    ];
+    return colors[note.id % colors.length];
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: _isSearching
-            ? TextField(
-                controller: _searchController,
-                autofocus: true,
-                decoration: InputDecoration(
-                  hintText: 'Buscar notas...',
-                  border: InputBorder.none,
-                  hintStyle: const TextStyle(color: Colors.white70),
-                  prefixIcon: const Icon(Icons.search, color: Colors.white),
-                  suffixIcon: IconButton(
-                    icon: const Icon(Icons.clear, color: Colors.white),
-                    onPressed: _hideSearch,
-                  ),
-                ),
-                style: const TextStyle(color: Colors.white),
-                onChanged: (query) {
-                  // Aquí implementaremos búsqueda en tiempo real después
-                },
-              )
-            : const Text(
-                'QuickNote',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 1,
-                ),
-              ),
-        backgroundColor: Colors.blue,
-        foregroundColor: Colors.white,
-        elevation: 4,
-        actions: [
-          if (!_isSearching)
-            IconButton(
-              icon: const Icon(Icons.search),
-              onPressed: _showSearch,
-              tooltip: 'Buscar',
-            ),
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _loadNotes,
-            tooltip: 'Refrescar',
-          ),
-        ],
-      ),
-      body: RefreshIndicator(
-        onRefresh: () async {
-          await Future.delayed(const Duration(seconds: 1));
-          _loadNotes();
-        },
-        color: Colors.blue,
-        backgroundColor: Colors.white,
-        displacement: 40,
-        child: FutureBuilder<List<Note>>(
-          future: _futureNotes,
-          builder: (context, snapshot) {
-            // Estado de carga
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    CircularProgressIndicator(
-                      color: Colors.blue,
-                      strokeWidth: 3,
-                    ),
-                    const SizedBox(height: 20),
-                    Text(
-                      'Cargando tus notas...',
-                      style: TextStyle(
-                        color: Colors.grey[600],
-                        fontSize: 16,
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            }
-
-            // Estado de error
-            if (snapshot.hasError) {
-              return Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(20),
-                        decoration: BoxDecoration(
-                          color: Colors.red.shade50,
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          Icons.error_outline,
-                          size: 60,
-                          color: Colors.red.shade400,
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      Text(
-                        '¡Ups! Algo salió mal',
-                        style: TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.grey[800],
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      Text(
-                        '${snapshot.error}',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: Colors.grey[600],
-                          fontSize: 14,
-                        ),
-                      ),
-                      const SizedBox(height: 30),
-                      ElevatedButton.icon(
-                        onPressed: _loadNotes,
-                        icon: const Icon(Icons.refresh),
-                        label: const Text('Reintentar'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blue,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 30,
-                            vertical: 15,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(30),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            }
-
-            final notes = snapshot.data ?? [];
-            
-            // ESTADO VACÍO - usando nuestro nuevo widget
-            if (notes.isEmpty) {
-              return EmptyNotesWidget(
-                onCreateNote: () async {
-                  final result = await Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const NoteFormScreen(),
-                    ),
-                  );
-                  if (result == true) _loadNotes();
-                },
-              );
-            }
-
-            // LISTA DE NOTAS
-            return ListView.builder(
-              padding: const EdgeInsets.only(top: 8, bottom: 80),
-              itemCount: notes.length,
-              itemBuilder: (context, index) {
-                final note = notes[index];
-                return NoteCard(
-                  note: note,
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      PageRouteBuilder(
-                        pageBuilder: (_, __, ___) => NoteDetailScreen(note: note),
-                        transitionsBuilder: (_, animation, __, child) {
-                          return FadeTransition(
-                            opacity: animation,
-                            child: child,
-                          );
-                        },
-                        transitionDuration: const Duration(milliseconds: 300),
-                      ),
-                    );
-                  },
-                  onEdit: () async {
-                    final result = await Navigator.push(
-                      context,
-                      PageRouteBuilder(
-                        pageBuilder: (_, __, ___) => NoteFormScreen(note: note),
-                        transitionsBuilder: (_, animation, __, child) {
-                          return SlideTransition(
-                            position: Tween<Offset>(
-                              begin: const Offset(1, 0),
-                              end: Offset.zero,
-                            ).animate(animation),
-                            child: child,
-                          );
-                        },
-                      ),
-                    );
-                    if (result == true) _loadNotes();
-                  },
-                  onDelete: () => _deleteNote(note),
+      key: _scaffoldKey,
+      backgroundColor: Colors.grey[50],
+      drawer: LeftMenu(onClose: _closeLeftMenu),
+      body: SafeArea(
+        child: Column(
+          children: [
+            // Header personalizado con dos menús
+            CustomHeader(
+              selectedCategory: _selectedCategory,
+              onCategorySelected: (category) {
+                setState(() {
+                  _selectedCategory = category;
+                });
+                SnackbarUtils.showInfoSnackbar(
+                  context,
+                  'Filtrando por: $category',
                 );
               },
-            );
-          },
+              onLeftMenuTap: _openLeftMenu,
+              onRightMenuTap: () {
+                // Mostrar el menú derecho como diálogo con efecto Liquid Glass
+                showDialog(
+                  context: context,
+                  barrierDismissible: true,
+                  barrierColor: Colors.black.withValues(alpha: 0.3),
+                  builder: (context) => Dialog(
+                    backgroundColor: Colors.transparent,
+                    elevation: 0,
+                    insetPadding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: NoteMenu(
+                      onViewList: () {
+                        _onViewList();
+                      },
+                      onSelect: () {
+                        _onSelect();
+                      },
+                      onSort: () {
+                        _onSort();
+                      },
+                      onSync: () {
+                        _onSync();
+                      },
+                      onImport: () {
+                        _onImport();
+                      },
+                    ),
+                  ),
+                );
+              },
+            ),
+            
+            // Espacio
+            const SizedBox(height: 8),
+            
+            // Lista de notas
+            Expanded(
+              child: RefreshIndicator(
+                onRefresh: () async {
+                  await Future.delayed(const Duration(seconds: 1));
+                  _loadNotes();
+                },
+                color: Colors.blue,
+                backgroundColor: Colors.white,
+                displacement: 40,
+                child: FutureBuilder<List<Note>>(
+                  future: _futureNotes,
+                  builder: (context, snapshot) {
+                    // Estado de carga
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(
+                        child: CircularProgressIndicator(
+                          color: Colors.blue,
+                          strokeWidth: 3,
+                        ),
+                      );
+                    }
+
+                    // Estado de error
+                    if (snapshot.hasError) {
+                      return Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(24),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(20),
+                                decoration: BoxDecoration(
+                                  color: Colors.red.shade50,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(
+                                  Icons.error_outline,
+                                  size: 60,
+                                  color: Colors.red.shade400,
+                                ),
+                              ),
+                              const SizedBox(height: 20),
+                              Text(
+                                '¡Ups! Algo salió mal',
+                                style: TextStyle(
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.grey[800],
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+                              Text(
+                                '${snapshot.error}',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  color: Colors.grey[600],
+                                  fontSize: 14,
+                                ),
+                              ),
+                              const SizedBox(height: 30),
+                              ElevatedButton.icon(
+                                onPressed: _loadNotes,
+                                icon: const Icon(Icons.refresh),
+                                label: const Text('Reintentar'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.blue,
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 30,
+                                    vertical: 15,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(30),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }
+
+                    final notes = snapshot.data ?? [];
+                    
+                    // Estado vacío
+                    if (notes.isEmpty) {
+                      return EmptyNotesWidget(
+                        onCreateNote: () async {
+                          final result = await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const NoteFormScreen(),
+                            ),
+                          );
+                          if (result == true) _loadNotes();
+                        },
+                      );
+                    }
+
+                    // Filtrar por categoría (ejemplo - implementa según tu lógica)
+                    final filteredNotes = _selectedCategory == 'Todas'
+                        ? notes
+                        : notes.where((note) {
+                            // Aquí implementa el filtrado real según categoría
+                            // Por ahora es un placeholder
+                            return note.id % 2 == 0;
+                          }).toList();
+
+                    // Grid de notas
+                    return Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: GridView.builder(
+                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          childAspectRatio: 0.85,
+                          crossAxisSpacing: 12,
+                          mainAxisSpacing: 12,
+                        ),
+                        itemCount: filteredNotes.length,
+                        itemBuilder: (context, index) {
+                          final note = filteredNotes[index];
+                          final noteColor = _getNoteColor(note);
+                          
+                          return GestureDetector(
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                PageRouteBuilder(
+                                  pageBuilder: (_, __, ___) => NoteDetailScreen(note: note),
+                                  transitionsBuilder: (_, animation, __, child) {
+                                    return FadeTransition(
+                                      opacity: animation,
+                                      child: child,
+                                    );
+                                  },
+                                  transitionDuration: const Duration(milliseconds: 300),
+                                ),
+                              );
+                            },
+                            child: Container(
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                  colors: [
+                                    noteColor.withValues(alpha: 0.1),
+                                    noteColor.withValues(alpha: 0.05),
+                                    Colors.white,
+                                  ],
+                                ),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                  color: noteColor.withValues(alpha: 0.3),
+                                  width: 1,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: noteColor.withValues(alpha: 0.1),
+                                    blurRadius: 10,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
+                              ),
+                              child: Stack(
+                                children: [
+                                  // Indicador de color superior
+                                  Positioned(
+                                    top: 0,
+                                    left: 0,
+                                    right: 0,
+                                    child: Container(
+                                      height: 8,
+                                      decoration: BoxDecoration(
+                                        gradient: LinearGradient(
+                                          colors: [
+                                            noteColor,
+                                            noteColor.withValues(alpha: 0.7),
+                                          ],
+                                        ),
+                                        borderRadius: const BorderRadius.vertical(
+                                          top: Radius.circular(20),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  
+                                  // Contenido de la tarjeta
+                                  Padding(
+                                    padding: const EdgeInsets.all(12),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        // Título
+                                        Text(
+                                          note.title,
+                                          style: TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.bold,
+                                            color: noteColor,
+                                          ),
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        
+                                        const SizedBox(height: 8),
+                                        
+                                        // Contenido (extracto)
+                                        Expanded(
+                                          child: Text(
+                                            note.content,
+                                            style: TextStyle(
+                                              fontSize: 13,
+                                              color: Colors.grey[700],
+                                              height: 1.3,
+                                            ),
+                                            maxLines: 4,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                        
+                                        const SizedBox(height: 8),
+                                        
+                                        // Fecha y acciones
+                                        Row(
+                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            // Fecha
+                                            Text(
+                                              _formatDate(note.createdAt),
+                                              style: TextStyle(
+                                                fontSize: 10,
+                                                color: Colors.grey[500],
+                                              ),
+                                            ),
+                                            
+                                            // Botones de acción
+                                            Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                // Botón editar
+                                                GestureDetector(
+                                                  onTap: () async {
+                                                    final result = await Navigator.push(
+                                                      context,
+                                                      PageRouteBuilder(
+                                                        pageBuilder: (_, __, ___) => NoteFormScreen(note: note),
+                                                        transitionsBuilder: (_, animation, __, child) {
+                                                          return SlideTransition(
+                                                            position: Tween<Offset>(
+                                                              begin: const Offset(1, 0),
+                                                              end: Offset.zero,
+                                                            ).animate(animation),
+                                                            child: child,
+                                                          );
+                                                        },
+                                                      ),
+                                                    );
+                                                    if (result == true) _loadNotes();
+                                                  },
+                                                  child: Container(
+                                                    padding: const EdgeInsets.all(6),
+                                                    decoration: BoxDecoration(
+                                                      color: noteColor.withValues(alpha: 0.1),
+                                                      borderRadius: BorderRadius.circular(8),
+                                                    ),
+                                                    child: Icon(
+                                                      Icons.edit,
+                                                      color: noteColor,
+                                                      size: 14,
+                                                    ),
+                                                  ),
+                                                ),
+                                                
+                                                const SizedBox(width: 8),
+                                                
+                                                // Botón eliminar
+                                                GestureDetector(
+                                                  onTap: () => _deleteNote(note),
+                                                  child: Container(
+                                                    padding: const EdgeInsets.all(6),
+                                                    decoration: BoxDecoration(
+                                                      color: Colors.red.withValues(alpha: 0.1),
+                                                      borderRadius: BorderRadius.circular(8),
+                                                    ),
+                                                    child: Icon(
+                                                      Icons.delete_outline,
+                                                      color: Colors.red,
+                                                      size: 14,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  
+                                  // Indicador de favorito
+                                  if (note.isFavorite)
+                                    Positioned(
+                                      top: 12,
+                                      right: 12,
+                                      child: Icon(
+                                        Icons.star,
+                                        color: Colors.amber,
+                                        size: 16,
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
+          ],
         ),
       ),
       floatingActionButton: FloatingActionButton(
@@ -331,9 +560,32 @@ class _NoteListScreenState extends State<NoteListScreen> {
           );
           if (result == true) _loadNotes();
         },
+        backgroundColor: Colors.blue,
+        foregroundColor: Colors.white,
+        elevation: 8,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
         child: const Icon(Icons.add),
         tooltip: 'Agregar nota',
       ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
     );
+  }
+
+  String _formatDate(String date) {
+    try {
+      if (date.length >= 10) {
+        final parts = date.substring(0, 10).split('-');
+        if (parts.length == 3) {
+          final day = parts[2];
+          final month = parts[1];
+          return '$day/$month';
+        }
+      }
+      return '';
+    } catch (e) {
+      return '';
+    }
   }
 }
