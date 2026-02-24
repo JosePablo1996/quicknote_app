@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'dart:ui';
 import 'package:provider/provider.dart';
 import '../providers/theme_provider.dart';
+import '../providers/security_provider.dart';
+import 'security_setup_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -12,8 +14,6 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   bool _notificationsEnabled = true;
-  bool _autoBackupEnabled = false;
-  bool _useBiometrics = false;
   String _selectedSortOrder = 'Fecha de modificación';
   final List<String> _sortOptions = [
     'Fecha de modificación',
@@ -25,6 +25,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
+    final securityProvider = Provider.of<SecurityProvider>(context);
     final isDarkMode = themeProvider.isDarkMode;
 
     return Scaffold(
@@ -110,8 +111,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
               children: [
                 _buildSettingsTile(
                   icon: Icons.lock,
-                  title: 'Bloquear',
-                  subtitle: 'Configurar bloqueo de la aplicación',
+                  title: 'Bloqueo de aplicación',
+                  subtitle: _getSecuritySubtitle(securityProvider),
                   trailing: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     decoration: BoxDecoration(
@@ -140,6 +141,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                   ),
                   isDarkMode: isDarkMode,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const SecuritySetupScreen(),
+                      ),
+                    );
+                  },
                 ),
               ],
             ),
@@ -209,30 +218,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
           const SizedBox(height: 20),
 
-          // SECCIÓN: RESPALDO
+          // SECCIÓN: RESPALDO (solo respaldo manual)
           _buildSectionHeader('Respaldo', isDarkMode),
           _buildGlassCard(
             child: Column(
               children: [
                 _buildSettingsTile(
-                  icon: Icons.backup,
-                  title: 'Respaldo automático',
-                  subtitle: 'Guardar copia de seguridad en la nube',
-                  trailing: _buildSwitch(
-                    value: _autoBackupEnabled,
-                    onChanged: (value) {
-                      setState(() {
-                        _autoBackupEnabled = value;
-                      });
-                    },
-                    isDarkMode: isDarkMode,
-                  ),
-                  isDarkMode: isDarkMode,
-                ),
-                _buildSettingsTile(
                   icon: Icons.backup_rounded,
-                  title: 'Respaldo ahora',
-                  subtitle: 'Crear copia de seguridad manual',
+                  title: 'Respaldo manual',
+                  subtitle: 'Crear copia de seguridad de tus notas',
                   trailing: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
@@ -254,6 +248,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                   ),
                   isDarkMode: isDarkMode,
+                  onTap: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: const Text('Respaldo manual - Próximamente'),
+                        backgroundColor: Colors.green,
+                        behavior: SnackBarBehavior.floating,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                    );
+                  },
                 ),
               ],
             ),
@@ -277,7 +283,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 _buildSettingsTile(
                   icon: Icons.favorite,
                   title: 'Desarrollado con ❤️ por',
-                  subtitle: 'Jose Pablo Miranda',
+                  subtitle: 'Jose Pablo Miranda Quintanilla - Desarrollador Full Stack',
                   isDarkMode: isDarkMode,
                   showArrow: false,
                 ),
@@ -287,7 +293,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   subtitle: 'Ver novedades de la versión',
                   isDarkMode: isDarkMode,
                   onTap: () {
-                    // Aquí irá la navegación al registro de cambios
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: const Text('Registro de cambios - Próximamente'),
@@ -319,6 +324,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ],
       ),
     );
+  }
+
+  String _getSecuritySubtitle(SecurityProvider provider) {
+    switch (provider.currentMethod) {
+      case SecurityMethod.none:
+        return 'Sin bloqueo - Toca para configurar';
+      case SecurityMethod.pin:
+        return 'PIN configurado - Toca para cambiar';
+      case SecurityMethod.pattern:
+        return 'Patrón configurado - Toca para cambiar';
+      case SecurityMethod.biometric:
+        return 'Biometría configurada - Toca para cambiar';
+      default:
+        return 'Sin configurar';
+    }
   }
 
   Widget _buildSectionHeader(String title, bool isDarkMode) {

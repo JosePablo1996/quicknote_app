@@ -4,6 +4,13 @@
     <!-- Permiso de Internet (OBLIGATORIO para tu API) -->
     <uses-permission android:name="android.permission.INTERNET" />
     
+    <!-- PERMISOS PARA BIOMETRÍA Y SEGURIDAD -->
+    <!-- Permiso para usar autenticación biométrica (huella digital) -->
+    <uses-permission android:name="android.permission.USE_BIOMETRIC" />
+    
+    <!-- Permiso para usar huella digital (versiones antiguas) -->
+    <uses-permission android:name="android.permission.USE_FINGERPRINT" />
+    
     <!-- Permisos para funcionalidades FUTURAS (notas de voz) -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
@@ -20,7 +27,7 @@
         android:usesCleartextTraffic="true">
         <!-- 
             NOTAS:
-            - allowBackup="false" desactiva el sistema de backup que requería esos XML
+            - allowBackup="false" desactiva el sistema de backup
             - usesCleartextTraffic="true" permite conexiones HTTP (útil para desarrollo)
         -->
         
@@ -33,6 +40,7 @@
             android:hardwareAccelerated="true"
             android:windowSoftInputMode="adjustResize">
             
+            <!-- Especifica el tema a aplicar mientras se inicializa Flutter -->
             <meta-data
                 android:name="io.flutter.embedding.android.NormalTheme"
                 android:resource="@style/NormalTheme" />
@@ -43,20 +51,28 @@
             </intent-filter>
         </activity>
         
+        <!-- Configuración necesaria para Flutter -->
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
     </application>
 
+    <!-- Consultas necesarias para funcionalidades de la app -->
     <queries>
+        <!-- Para procesamiento de texto -->
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT" />
             <data android:mimeType="text/plain" />
         </intent>
-        <!-- Para reproducir audio -->
+        <!-- Para reproducir audio (futuro) -->
         <intent>
             <action android:name="android.intent.action.VIEW" />
             <data android:mimeType="audio/*" />
+        </intent>
+        <!-- Para verificar disponibilidad de biometría -->
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <category android:name="android.intent.category.BROWSABLE" />
         </intent>
     </queries>
 </manifest>
