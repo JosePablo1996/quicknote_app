@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
+import 'dart:ui';
+import 'package:provider/provider.dart';
 import '../models/note.dart';
 import '../services/api_service.dart';
-import '../widgets/note_card.dart';
 import '../widgets/empty_notes_widget.dart';
 import '../widgets/custom_header.dart';
 import '../widgets/note_menu.dart';
 import '../widgets/left_menu.dart';
+import '../providers/theme_provider.dart';
 import '../utils/snackbar_utils.dart';
 import 'note_form_screen.dart';
 import 'note_detail_screen.dart';
@@ -20,15 +22,9 @@ class NoteListScreen extends StatefulWidget {
 class _NoteListScreenState extends State<NoteListScreen> {
   final ApiService _apiService = ApiService();
   late Future<List<Note>> _futureNotes;
-  
-  // Controlador para búsqueda
   final TextEditingController _searchController = TextEditingController();
   bool _isSearching = false;
-  
-  // Categoría seleccionada
   String _selectedCategory = 'Todas';
-  
-  // Controlador para el menú izquierdo
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   @override
@@ -102,20 +98,249 @@ class _NoteListScreenState extends State<NoteListScreen> {
     }
   }
 
-  void _showSearch() {
-    setState(() {
-      _isSearching = true;
-    });
+  void _showNoteOptions(Note note, Color noteColor) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Colors.white.withValues(alpha: 0.95),
+              noteColor.withValues(alpha: 0.2),
+              Colors.white.withValues(alpha: 0.95),
+            ],
+          ),
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
+          boxShadow: [
+            BoxShadow(
+              color: noteColor.withValues(alpha: 0.3),
+              blurRadius: 20,
+              spreadRadius: 0,
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+            child: Container(
+              padding: const EdgeInsets.all(20),
+              color: Colors.white.withValues(alpha: 0.3),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[300],
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Row(
+                    children: [
+                      Container(
+                        width: 50,
+                        height: 50,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              noteColor,
+                              noteColor.withValues(alpha: 0.8),
+                            ],
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: noteColor.withValues(alpha: 0.3),
+                              blurRadius: 8,
+                            ),
+                          ],
+                        ),
+                        child: Center(
+                          child: Text(
+                            _getInitials(note.title),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              note.title,
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: noteColor,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              note.content,
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Colors.grey[600],
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                  _buildModalOption(
+                    icon: Icons.edit,
+                    label: 'Editar nota',
+                    color: noteColor,
+                    onTap: () {
+                      Navigator.pop(context);
+                      _navigateToEditNote(note);
+                    },
+                  ),
+                  _buildModalOption(
+                    icon: Icons.update,
+                    label: 'Actualizar nota',
+                    color: noteColor,
+                    onTap: () {
+                      Navigator.pop(context);
+                      SnackbarUtils.showInfoSnackbar(
+                        context,
+                        'Función de actualizar próximamente',
+                      );
+                    },
+                  ),
+                  _buildModalOption(
+                    icon: Icons.delete_outline,
+                    label: 'Eliminar nota',
+                    color: Colors.red,
+                    onTap: () {
+                      Navigator.pop(context);
+                      _deleteNote(note);
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
-  void _hideSearch() {
-    setState(() {
-      _isSearching = false;
-      _searchController.clear();
-    });
+  Widget _buildModalOption({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 6),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Colors.white.withValues(alpha: 0.7),
+            Colors.white.withValues(alpha: 0.9),
+            color.withValues(alpha: 0.1),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(15),
+        border: Border.all(
+          color: color.withValues(alpha: 0.3),
+          width: 1,
+        ),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(15),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(
+                    icon,
+                    color: color,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Text(
+                    label,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.grey[800],
+                    ),
+                  ),
+                ),
+                Container(
+                  width: 40,
+                  height: 24,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        color.withValues(alpha: 0.3),
+                        color.withValues(alpha: 0.1),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: color.withValues(alpha: 0.5),
+                      width: 1,
+                    ),
+                  ),
+                  child: Center(
+                    child: Container(
+                      width: 20,
+                      height: 20,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: color,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
-  // Métodos para el menú derecho
+  void _navigateToEditNote(Note note) async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => NoteFormScreen(note: note),
+      ),
+    );
+    if (result == true) _loadNotes();
+  }
+
   void _onViewList() {
     SnackbarUtils.showInfoSnackbar(context, 'Cambiar vista');
   }
@@ -137,7 +362,6 @@ class _NoteListScreenState extends State<NoteListScreen> {
     SnackbarUtils.showInfoSnackbar(context, 'Importar notas');
   }
 
-  // Métodos para el menú izquierdo
   void _openLeftMenu() {
     _scaffoldKey.currentState?.openDrawer();
   }
@@ -146,8 +370,34 @@ class _NoteListScreenState extends State<NoteListScreen> {
     Navigator.pop(context);
   }
 
-  // Método para obtener color basado en el ID
+  String _getInitials(String title) {
+    if (title.isEmpty) return '?';
+    final words = title.split(' ');
+    if (words.length >= 2) {
+      return '${words[0][0]}${words[1][0]}'.toUpperCase();
+    }
+    return title[0].toUpperCase();
+  }
+
   Color _getNoteColor(Note note) {
+    if (note.colorHex != null && note.colorHex!.isNotEmpty) {
+      try {
+        return Color(int.parse(note.colorHex!.replaceFirst('#', '0xff')));
+      } catch (e) {
+        final List<Color> colors = [
+          Colors.blue,
+          Colors.red,
+          Colors.green,
+          Colors.orange,
+          Colors.purple,
+          Colors.teal,
+          Colors.pink,
+          Colors.indigo,
+        ];
+        return colors[note.id % colors.length];
+      }
+    }
+    
     final List<Color> colors = [
       Colors.blue,
       Colors.red,
@@ -163,14 +413,15 @@ class _NoteListScreenState extends State<NoteListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    
     return Scaffold(
       key: _scaffoldKey,
-      backgroundColor: Colors.grey[50],
+      backgroundColor: themeProvider.isDarkMode ? Colors.grey[900] : Colors.grey[50],
       drawer: LeftMenu(onClose: _closeLeftMenu),
       body: SafeArea(
         child: Column(
           children: [
-            // Header personalizado con dos menús
             CustomHeader(
               selectedCategory: _selectedCategory,
               onCategorySelected: (category) {
@@ -184,7 +435,6 @@ class _NoteListScreenState extends State<NoteListScreen> {
               },
               onLeftMenuTap: _openLeftMenu,
               onRightMenuTap: () {
-                // Mostrar el menú derecho como diálogo con efecto Liquid Glass
                 showDialog(
                   context: context,
                   barrierDismissible: true,
@@ -194,31 +444,19 @@ class _NoteListScreenState extends State<NoteListScreen> {
                     elevation: 0,
                     insetPadding: const EdgeInsets.symmetric(horizontal: 20),
                     child: NoteMenu(
-                      onViewList: () {
-                        _onViewList();
-                      },
-                      onSelect: () {
-                        _onSelect();
-                      },
-                      onSort: () {
-                        _onSort();
-                      },
-                      onSync: () {
-                        _onSync();
-                      },
-                      onImport: () {
-                        _onImport();
-                      },
+                      onViewList: _onViewList,
+                      onSelect: _onSelect,
+                      onSort: _onSort,
+                      onSync: _onSync,
+                      onImport: _onImport,
                     ),
                   ),
                 );
               },
             ),
             
-            // Espacio
             const SizedBox(height: 8),
             
-            // Lista de notas
             Expanded(
               child: RefreshIndicator(
                 onRefresh: () async {
@@ -231,7 +469,6 @@ class _NoteListScreenState extends State<NoteListScreen> {
                 child: FutureBuilder<List<Note>>(
                   future: _futureNotes,
                   builder: (context, snapshot) {
-                    // Estado de carga
                     if (snapshot.connectionState == ConnectionState.waiting) {
                       return const Center(
                         child: CircularProgressIndicator(
@@ -241,7 +478,6 @@ class _NoteListScreenState extends State<NoteListScreen> {
                       );
                     }
 
-                    // Estado de error
                     if (snapshot.hasError) {
                       return Center(
                         child: Padding(
@@ -267,16 +503,7 @@ class _NoteListScreenState extends State<NoteListScreen> {
                                 style: TextStyle(
                                   fontSize: 22,
                                   fontWeight: FontWeight.bold,
-                                  color: Colors.grey[800],
-                                ),
-                              ),
-                              const SizedBox(height: 10),
-                              Text(
-                                '${snapshot.error}',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  color: Colors.grey[600],
-                                  fontSize: 14,
+                                  color: themeProvider.isDarkMode ? Colors.white : Colors.grey[800],
                                 ),
                               ),
                               const SizedBox(height: 30),
@@ -304,7 +531,6 @@ class _NoteListScreenState extends State<NoteListScreen> {
 
                     final notes = snapshot.data ?? [];
                     
-                    // Estado vacío
                     if (notes.isEmpty) {
                       return EmptyNotesWidget(
                         onCreateNote: () async {
@@ -319,223 +545,127 @@ class _NoteListScreenState extends State<NoteListScreen> {
                       );
                     }
 
-                    // Filtrar por categoría (ejemplo - implementa según tu lógica)
                     final filteredNotes = _selectedCategory == 'Todas'
                         ? notes
-                        : notes.where((note) {
-                            // Aquí implementa el filtrado real según categoría
-                            // Por ahora es un placeholder
-                            return note.id % 2 == 0;
-                          }).toList();
+                        : notes.where((note) => note.id % 2 == 0).toList();
 
-                    // Grid de notas
-                    return Padding(
+                    return ListView.builder(
                       padding: const EdgeInsets.all(16),
-                      child: GridView.builder(
-                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          childAspectRatio: 0.85,
-                          crossAxisSpacing: 12,
-                          mainAxisSpacing: 12,
-                        ),
-                        itemCount: filteredNotes.length,
-                        itemBuilder: (context, index) {
-                          final note = filteredNotes[index];
-                          final noteColor = _getNoteColor(note);
-                          
-                          return GestureDetector(
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                PageRouteBuilder(
-                                  pageBuilder: (_, __, ___) => NoteDetailScreen(note: note),
-                                  transitionsBuilder: (_, animation, __, child) {
-                                    return FadeTransition(
-                                      opacity: animation,
-                                      child: child,
-                                    );
-                                  },
-                                  transitionDuration: const Duration(milliseconds: 300),
-                                ),
-                              );
-                            },
-                            child: Container(
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                  colors: [
-                                    noteColor.withValues(alpha: 0.1),
-                                    noteColor.withValues(alpha: 0.05),
-                                    Colors.white,
-                                  ],
-                                ),
-                                borderRadius: BorderRadius.circular(20),
-                                border: Border.all(
-                                  color: noteColor.withValues(alpha: 0.3),
-                                  width: 1,
-                                ),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: noteColor.withValues(alpha: 0.1),
-                                    blurRadius: 10,
-                                    offset: const Offset(0, 4),
-                                  ),
+                      itemCount: filteredNotes.length,
+                      itemBuilder: (context, index) {
+                        final note = filteredNotes[index];
+                        final initials = _getInitials(note.title);
+                        final noteColor = _getNoteColor(note);
+                        
+                        return GestureDetector(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              PageRouteBuilder(
+                                pageBuilder: (_, __, ___) => NoteDetailScreen(note: note),
+                                transitionsBuilder: (_, animation, __, child) {
+                                  return FadeTransition(
+                                    opacity: animation,
+                                    child: child,
+                                  );
+                                },
+                                transitionDuration: const Duration(milliseconds: 300),
+                              ),
+                            );
+                          },
+                          onLongPress: () => _showNoteOptions(note, noteColor),
+                          child: Container(
+                            margin: const EdgeInsets.only(bottom: 12),
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [
+                                  themeProvider.isDarkMode ? Colors.grey[850]! : Colors.white,
+                                  noteColor.withValues(alpha: 0.05),
+                                  noteColor.withValues(alpha: 0.1),
                                 ],
                               ),
-                              child: Stack(
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: noteColor.withValues(alpha: 0.3),
+                                width: 1,
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: noteColor.withValues(alpha: 0.1),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.all(16),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  // Indicador de color superior
-                                  Positioned(
-                                    top: 0,
-                                    left: 0,
-                                    right: 0,
-                                    child: Container(
-                                      height: 8,
-                                      decoration: BoxDecoration(
-                                        gradient: LinearGradient(
-                                          colors: [
-                                            noteColor,
-                                            noteColor.withValues(alpha: 0.7),
-                                          ],
+                                  Container(
+                                    width: 50,
+                                    height: 50,
+                                    decoration: BoxDecoration(
+                                      gradient: LinearGradient(
+                                        colors: [
+                                          noteColor,
+                                          noteColor.withValues(alpha: 0.8),
+                                        ],
+                                      ),
+                                      borderRadius: BorderRadius.circular(12),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: noteColor.withValues(alpha: 0.3),
+                                          blurRadius: 8,
                                         ),
-                                        borderRadius: const BorderRadius.vertical(
-                                          top: Radius.circular(20),
+                                      ],
+                                    ),
+                                    child: Center(
+                                      child: Text(
+                                        initials,
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.bold,
                                         ),
                                       ),
                                     ),
                                   ),
-                                  
-                                  // Contenido de la tarjeta
-                                  Padding(
-                                    padding: const EdgeInsets.all(12),
+                                  const SizedBox(width: 16),
+                                  Expanded(
                                     child: Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
-                                        // Título
                                         Text(
                                           note.title,
                                           style: TextStyle(
-                                            fontSize: 16,
+                                            fontSize: 18,
                                             fontWeight: FontWeight.bold,
                                             color: noteColor,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Text(
+                                          note.content,
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            color: themeProvider.isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                                            height: 1.4,
                                           ),
                                           maxLines: 2,
                                           overflow: TextOverflow.ellipsis,
                                         ),
-                                        
-                                        const SizedBox(height: 8),
-                                        
-                                        // Contenido (extracto)
-                                        Expanded(
-                                          child: Text(
-                                            note.content,
-                                            style: TextStyle(
-                                              fontSize: 13,
-                                              color: Colors.grey[700],
-                                              height: 1.3,
-                                            ),
-                                            maxLines: 4,
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                        ),
-                                        
-                                        const SizedBox(height: 8),
-                                        
-                                        // Fecha y acciones
-                                        Row(
-                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                          children: [
-                                            // Fecha
-                                            Text(
-                                              _formatDate(note.createdAt),
-                                              style: TextStyle(
-                                                fontSize: 10,
-                                                color: Colors.grey[500],
-                                              ),
-                                            ),
-                                            
-                                            // Botones de acción
-                                            Row(
-                                              mainAxisSize: MainAxisSize.min,
-                                              children: [
-                                                // Botón editar
-                                                GestureDetector(
-                                                  onTap: () async {
-                                                    final result = await Navigator.push(
-                                                      context,
-                                                      PageRouteBuilder(
-                                                        pageBuilder: (_, __, ___) => NoteFormScreen(note: note),
-                                                        transitionsBuilder: (_, animation, __, child) {
-                                                          return SlideTransition(
-                                                            position: Tween<Offset>(
-                                                              begin: const Offset(1, 0),
-                                                              end: Offset.zero,
-                                                            ).animate(animation),
-                                                            child: child,
-                                                          );
-                                                        },
-                                                      ),
-                                                    );
-                                                    if (result == true) _loadNotes();
-                                                  },
-                                                  child: Container(
-                                                    padding: const EdgeInsets.all(6),
-                                                    decoration: BoxDecoration(
-                                                      color: noteColor.withValues(alpha: 0.1),
-                                                      borderRadius: BorderRadius.circular(8),
-                                                    ),
-                                                    child: Icon(
-                                                      Icons.edit,
-                                                      color: noteColor,
-                                                      size: 14,
-                                                    ),
-                                                  ),
-                                                ),
-                                                
-                                                const SizedBox(width: 8),
-                                                
-                                                // Botón eliminar
-                                                GestureDetector(
-                                                  onTap: () => _deleteNote(note),
-                                                  child: Container(
-                                                    padding: const EdgeInsets.all(6),
-                                                    decoration: BoxDecoration(
-                                                      color: Colors.red.withValues(alpha: 0.1),
-                                                      borderRadius: BorderRadius.circular(8),
-                                                    ),
-                                                    child: Icon(
-                                                      Icons.delete_outline,
-                                                      color: Colors.red,
-                                                      size: 14,
-                                                    ),
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ],
-                                        ),
                                       ],
                                     ),
                                   ),
-                                  
-                                  // Indicador de favorito
-                                  if (note.isFavorite)
-                                    Positioned(
-                                      top: 12,
-                                      right: 12,
-                                      child: Icon(
-                                        Icons.star,
-                                        color: Colors.amber,
-                                        size: 16,
-                                      ),
-                                    ),
                                 ],
                               ),
                             ),
-                          );
-                        },
-                      ),
+                          ),
+                        );
+                      },
                     );
                   },
                 ),
@@ -566,26 +696,10 @@ class _NoteListScreenState extends State<NoteListScreen> {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
         ),
-        child: const Icon(Icons.add),
+        child: const Icon(Icons.add), // ✅ child al final
         tooltip: 'Agregar nota',
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
     );
-  }
-
-  String _formatDate(String date) {
-    try {
-      if (date.length >= 10) {
-        final parts = date.substring(0, 10).split('-');
-        if (parts.length == 3) {
-          final day = parts[2];
-          final month = parts[1];
-          return '$day/$month';
-        }
-      }
-      return '';
-    } catch (e) {
-      return '';
-    }
   }
 }

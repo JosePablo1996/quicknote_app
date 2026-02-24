@@ -1,32 +1,31 @@
 import 'package:flutter/material.dart';
-import 'screens/splash_screen.dart'; // Importar el splash screen
-// import 'screens/note_list_screen.dart'; // Ya no es necesario aquí
+import 'package:provider/provider.dart';
+import 'providers/theme_provider.dart';
+import 'screens/splash_screen.dart';
 
 void main() {
-  runApp(const QuickNoteApp());
+  runApp(const MyApp());
 }
 
-class QuickNoteApp extends StatelessWidget {
-  const QuickNoteApp({super.key});
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'QuickNote',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-        useMaterial3: true,
-        appBarTheme: const AppBarTheme(
-          elevation: 2,
-          centerTitle: true,
-        ),
-        floatingActionButtonTheme: const FloatingActionButtonThemeData(
-          backgroundColor: Colors.blue,
-          foregroundColor: Colors.white,
-        ),
+    return ChangeNotifierProvider(
+      create: (_) => ThemeProvider(),
+      child: Consumer<ThemeProvider>(
+        builder: (context, themeProvider, child) {
+          return MaterialApp(
+            title: 'QuickNote',
+            debugShowCheckedModeBanner: false,
+            theme: ThemeProvider.lightTheme,
+            darkTheme: ThemeProvider.darkTheme,
+            themeMode: themeProvider.isDarkMode ? ThemeMode.dark : ThemeMode.light,
+            home: const SplashScreen(),
+          );
+        },
       ),
-      home: const SplashScreen(), // 👈 Ahora inicia con SplashScreen
     );
   }
 }

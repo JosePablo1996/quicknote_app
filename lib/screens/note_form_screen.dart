@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'dart:ui';
+import 'package:provider/provider.dart';
 import '../models/note.dart';
 import '../services/api_service.dart';
 import '../utils/snackbar_utils.dart';
+import '../providers/theme_provider.dart';
 
 class NoteFormScreen extends StatefulWidget {
   final Note? note;
@@ -48,13 +51,11 @@ class _NoteFormScreenState extends State<NoteFormScreen>
     _titleController = TextEditingController(text: widget.note?.title ?? '');
     _contentController = TextEditingController(text: widget.note?.content ?? '');
     
-    // Si es una nota existente, cargar sus propiedades
     if (widget.note != null) {
       _isFavorite = widget.note?.isFavorite ?? false;
       _tags = widget.note?.tags ?? [];
     }
     
-    // Animación para efecto glass
     _glassAnimationController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 2000),
@@ -83,20 +84,17 @@ class _NoteFormScreenState extends State<NoteFormScreen>
 
     try {
       if (widget.note == null) {
-        // Crear nueva nota
         await _apiService.createNote(
           _titleController.text.trim(),
           _contentController.text.trim(),
         );
         if (mounted) {
-          // Usar Snackbar sin parámetro duration
           SnackbarUtils.showSuccessSnackbar(
             context, 
             'Nota creada exitosamente',
           );
         }
       } else {
-        // Actualizar nota existente
         await _apiService.updateNote(
           widget.note!.id,
           _titleController.text.trim(),
@@ -110,7 +108,6 @@ class _NoteFormScreenState extends State<NoteFormScreen>
         }
       }
       
-      // Pequeña pausa para mostrar el Snackbar antes de cerrar
       await Future.delayed(const Duration(milliseconds: 500));
       if (mounted) Navigator.pop(context, true);
     } catch (e) {
@@ -126,180 +123,348 @@ class _NoteFormScreenState extends State<NoteFormScreen>
   }
 
   void _showMoreMenu() {
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    final isDarkMode = themeProvider.isDarkMode;
+
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
+      isScrollControlled: true,
       builder: (context) => Container(
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(25)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.1),
-              blurRadius: 20,
-              spreadRadius: 0,
-            ),
-          ],
+          color: Colors.transparent,
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Indicador superior
-            Container(
-              margin: const EdgeInsets.symmetric(vertical: 12),
-              width: 40,
-              height: 4,
+        child: ClipRRect(
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+            child: Container(
               decoration: BoxDecoration(
-                color: Colors.grey[300],
-                borderRadius: BorderRadius.circular(2),
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: isDarkMode
+                      ? [
+                          Colors.grey[900]!.withValues(alpha: 0.8),
+                          Colors.grey[850]!.withValues(alpha: 0.7),
+                        ]
+                      : [
+                          Colors.white.withValues(alpha: 0.8),
+                          Colors.blue.shade50.withValues(alpha: 0.7),
+                        ],
+                ),
+                border: Border(
+                  top: BorderSide(
+                    color: isDarkMode
+                        ? Colors.grey[600]!.withValues(alpha: 0.3)
+                        : Colors.white.withValues(alpha: 0.5),
+                    width: 1,
+                  ),
+                ),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Indicador superior mejorado
+                  Container(
+                    margin: const EdgeInsets.symmetric(vertical: 16),
+                    child: Container(
+                      width: 50,
+                      height: 5,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            Colors.blue.shade300,
+                            Colors.purple.shade300,
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(3),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.blue.withValues(alpha: 0.3),
+                            blurRadius: 8,
+                            spreadRadius: 0,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  
+                  // Título del menú
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 4,
+                          height: 24,
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                Colors.blue.shade400,
+                                Colors.purple.shade400,
+                              ],
+                            ),
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Text(
+                          'Opciones de nota',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: isDarkMode ? Colors.grey[200] : Colors.grey[800],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  
+                  const SizedBox(height: 8),
+                  
+                  // Añadir etiquetas
+                  _buildModernMenuItem(
+                    context,
+                    icon: Icons.label_outline,
+                    title: 'Añadir etiquetas',
+                    color: Colors.blue,
+                    isDarkMode: isDarkMode,
+                    onTap: () {
+                      Navigator.pop(context);
+                      _showTagsDialog();
+                    },
+                  ),
+                  
+                  // Exportar (simplificado)
+                  _buildModernMenuItem(
+                    context,
+                    icon: Icons.picture_as_pdf,
+                    title: 'Exportar',
+                    color: Colors.red,
+                    isDarkMode: isDarkMode,
+                    onTap: () {
+                      Navigator.pop(context);
+                      _showShareDialog();
+                    },
+                  ),
+                  
+                  // Buscar
+                  _buildModernMenuItem(
+                    context,
+                    icon: Icons.search,
+                    title: 'Buscar',
+                    color: Colors.green,
+                    isDarkMode: isDarkMode,
+                    onTap: () {
+                      Navigator.pop(context);
+                      SnackbarUtils.showInfoSnackbar(
+                        context, 
+                        'Funcionalidad próximamente',
+                      );
+                    },
+                  ),
+                  
+                  // Detalles de la nota
+                  _buildModernMenuItem(
+                    context,
+                    icon: Icons.info_outline,
+                    title: 'Detalles de la nota',
+                    color: Colors.purple,
+                    isDarkMode: isDarkMode,
+                    onTap: () {
+                      Navigator.pop(context);
+                      _showNoteDetails();
+                    },
+                  ),
+                  
+                  // Añadir a favoritos
+                  _buildModernMenuItem(
+                    context,
+                    icon: _isFavorite ? Icons.star : Icons.star_border,
+                    title: _isFavorite ? 'Quitar de favoritos' : 'Añadir a favoritos',
+                    color: Colors.amber,
+                    isDarkMode: isDarkMode,
+                    onTap: () {
+                      setState(() => _isFavorite = !_isFavorite);
+                      Navigator.pop(context);
+                      SnackbarUtils.showSuccessSnackbar(
+                        context,
+                        _isFavorite ? 'Añadida a favoritos' : 'Eliminada de favoritos',
+                      );
+                    },
+                  ),
+                  
+                  // Archivar
+                  _buildModernMenuItem(
+                    context,
+                    icon: Icons.archive_outlined,
+                    title: 'Archivar',
+                    color: Colors.teal,
+                    isDarkMode: isDarkMode,
+                    onTap: () {
+                      Navigator.pop(context);
+                      SnackbarUtils.showInfoSnackbar(
+                        context, 
+                        'Nota archivada',
+                      );
+                    },
+                  ),
+                  
+                  const Divider(
+                    height: 16,
+                    thickness: 1,
+                    indent: 20,
+                    endIndent: 20,
+                    color: Colors.grey,
+                  ),
+                  
+                  // Eliminar
+                  _buildModernMenuItem(
+                    context,
+                    icon: Icons.delete_outline,
+                    title: 'Eliminar',
+                    color: Colors.red,
+                    isDarkMode: isDarkMode,
+                    showArrow: false,
+                    onTap: () {
+                      Navigator.pop(context);
+                      _confirmDelete();
+                    },
+                  ),
+                  
+                  const SizedBox(height: 20),
+                ],
               ),
             ),
-            
-            // Añadir etiquetas
-            _buildModernMenuItem(
-              icon: Icons.label_outline,
-              title: 'Añadir etiquetas',
-              color: Colors.blue,
-              onTap: () {
-                Navigator.pop(context);
-                _showTagsDialog();
-              },
-            ),
-            
-            // Exportar a PDF
-            _buildModernMenuItem(
-              icon: Icons.picture_as_pdf,
-              title: 'Exportar a PDF',
-              color: Colors.red,
-              onTap: () {
-                Navigator.pop(context);
-                _showShareDialog();
-              },
-            ),
-            
-            // Buscar
-            _buildModernMenuItem(
-              icon: Icons.search,
-              title: 'Buscar',
-              color: Colors.green,
-              onTap: () {
-                Navigator.pop(context);
-                SnackbarUtils.showInfoSnackbar(
-                  context, 
-                  'Funcionalidad próximamente',
-                );
-              },
-            ),
-            
-            // Detalles de la nota
-            _buildModernMenuItem(
-              icon: Icons.info_outline,
-              title: 'Detalles de la nota',
-              color: Colors.purple,
-              onTap: () {
-                Navigator.pop(context);
-                _showNoteDetails();
-              },
-            ),
-            
-            // Añadir a favoritos
-            _buildModernMenuItem(
-              icon: _isFavorite ? Icons.star : Icons.star_border,
-              title: _isFavorite ? 'Quitar de favoritos' : 'Añadir a favoritos',
-              color: Colors.amber,
-              onTap: () {
-                setState(() => _isFavorite = !_isFavorite);
-                Navigator.pop(context);
-                SnackbarUtils.showSuccessSnackbar(
-                  context,
-                  _isFavorite ? 'Añadida a favoritos' : 'Eliminada de favoritos',
-                );
-              },
-            ),
-            
-            // Archivar
-            _buildModernMenuItem(
-              icon: Icons.archive_outlined,
-              title: 'Archivar',
-              color: Colors.teal,
-              onTap: () {
-                Navigator.pop(context);
-                SnackbarUtils.showInfoSnackbar(
-                  context, 
-                  'Nota archivada',
-                );
-              },
-            ),
-            
-            const Divider(height: 1),
-            
-            // Eliminar
-            _buildModernMenuItem(
-              icon: Icons.delete_outline,
-              title: 'Eliminar',
-              color: Colors.red,
-              showArrow: false,
-              onTap: () {
-                Navigator.pop(context);
-                _confirmDelete();
-              },
-            ),
-            
-            const SizedBox(height: 10),
-          ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildModernMenuItem({
+  Widget _buildModernMenuItem(
+    BuildContext context, {
     required IconData icon,
     required String title,
     required Color color,
+    required bool isDarkMode,
     required VoidCallback onTap,
     bool showArrow = true,
   }) {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        color: Colors.white,
-      ),
-      child: ListTile(
-        leading: Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: isDarkMode
+              ? [
+                  Colors.grey[800]!.withValues(alpha: 0.5),
+                  Colors.grey[700]!.withValues(alpha: 0.3),
+                ]
+              : [
+                  Colors.white.withValues(alpha: 0.9),
+                  Colors.grey[50]!.withValues(alpha: 0.7),
+                ],
+        ),
+        border: Border.all(
+          color: isDarkMode
+              ? color.withValues(alpha: 0.3)
+              : color.withValues(alpha: 0.2),
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
             color: color.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(10),
+            blurRadius: 12,
+            spreadRadius: 0,
+            offset: const Offset(0, 4),
           ),
-          child: Icon(icon, color: color, size: 22),
-        ),
-        title: Text(
-          title,
-          style: const TextStyle(
-            fontSize: 15,
-            fontWeight: FontWeight.w500,
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(20),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: onTap,
+              borderRadius: BorderRadius.circular(20),
+              splashColor: color.withValues(alpha: 0.2),
+              highlightColor: color.withValues(alpha: 0.1),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            color.withValues(alpha: 0.2),
+                            color.withValues(alpha: 0.05),
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(15),
+                        border: Border.all(
+                          color: color.withValues(alpha: 0.3),
+                          width: 1,
+                        ),
+                      ),
+                      child: Icon(icon, color: color, size: 22),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Text(
+                        title,
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: isDarkMode ? Colors.grey[200] : Colors.grey[800],
+                        ),
+                      ),
+                    ),
+                    if (showArrow)
+                      Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: color.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Icon(
+                          Icons.arrow_forward_ios,
+                          color: color,
+                          size: 14,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
           ),
-        ),
-        trailing: showArrow 
-            ? Icon(Icons.arrow_forward_ios, color: Colors.grey[400], size: 16)
-            : null,
-        onTap: onTap,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
         ),
       ),
     );
   }
 
   void _showShareDialog() {
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    final isDarkMode = themeProvider.isDarkMode;
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text(
+        title: Text(
           'Compartir como',
-          style: TextStyle(fontWeight: FontWeight.bold),
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: isDarkMode ? Colors.grey[300] : Colors.black87,
+          ),
         ),
+        backgroundColor: isDarkMode ? Colors.grey[900] : Colors.white,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(25),
         ),
@@ -307,9 +472,11 @@ class _NoteFormScreenState extends State<NoteFormScreen>
           mainAxisSize: MainAxisSize.min,
           children: [
             _buildShareOption(
+              context,
               icon: Icons.image,
               label: 'Imagen',
               color: Colors.purple,
+              isDarkMode: isDarkMode,
               onTap: () {
                 Navigator.pop(context);
                 SnackbarUtils.showInfoSnackbar(
@@ -319,9 +486,11 @@ class _NoteFormScreenState extends State<NoteFormScreen>
               },
             ),
             _buildShareOption(
+              context,
               icon: Icons.picture_as_pdf,
               label: 'PDF',
               color: Colors.red,
+              isDarkMode: isDarkMode,
               onTap: () {
                 Navigator.pop(context);
                 SnackbarUtils.showInfoSnackbar(
@@ -331,9 +500,11 @@ class _NoteFormScreenState extends State<NoteFormScreen>
               },
             ),
             _buildShareOption(
+              context,
               icon: Icons.text_fields,
               label: 'Solo texto',
               color: Colors.blue,
+              isDarkMode: isDarkMode,
               onTap: () {
                 Navigator.pop(context);
                 SnackbarUtils.showInfoSnackbar(
@@ -348,17 +519,19 @@ class _NoteFormScreenState extends State<NoteFormScreen>
     );
   }
 
-  Widget _buildShareOption({
+  Widget _buildShareOption(
+    BuildContext context, {
     required IconData icon,
     required String label,
     required Color color,
+    required bool isDarkMode,
     required VoidCallback onTap,
   }) {
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 4),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
-        color: Colors.grey[50],
+        color: isDarkMode ? Colors.grey[800] : Colors.grey[50],
       ),
       child: ListTile(
         leading: Container(
@@ -371,9 +544,16 @@ class _NoteFormScreenState extends State<NoteFormScreen>
         ),
         title: Text(
           label,
-          style: const TextStyle(fontWeight: FontWeight.w500),
+          style: TextStyle(
+            fontWeight: FontWeight.w500,
+            color: isDarkMode ? Colors.grey[300] : Colors.black87,
+          ),
         ),
-        trailing: Icon(Icons.arrow_forward_ios, color: Colors.grey[400], size: 14),
+        trailing: Icon(
+          Icons.arrow_forward_ios, 
+          color: isDarkMode ? Colors.grey[500] : Colors.grey[400], 
+          size: 14,
+        ),
         onTap: onTap,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
@@ -383,11 +563,20 @@ class _NoteFormScreenState extends State<NoteFormScreen>
   }
 
   void _showTagsDialog() {
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    final isDarkMode = themeProvider.isDarkMode;
+
     final tagController = TextEditingController();
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Añadir etiquetas'),
+        title: Text(
+          'Añadir etiquetas',
+          style: TextStyle(
+            color: isDarkMode ? Colors.grey[300] : Colors.black87,
+          ),
+        ),
+        backgroundColor: isDarkMode ? Colors.grey[900] : Colors.white,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(25),
         ),
@@ -396,12 +585,34 @@ class _NoteFormScreenState extends State<NoteFormScreen>
           children: [
             TextField(
               controller: tagController,
+              style: TextStyle(
+                color: isDarkMode ? Colors.grey[300] : Colors.black87,
+              ),
               decoration: InputDecoration(
                 hintText: 'Nombre de la etiqueta',
+                hintStyle: TextStyle(
+                  color: isDarkMode ? Colors.grey[500] : Colors.grey[600],
+                ),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(
+                    color: isDarkMode ? Colors.grey[700]! : Colors.grey[300]!,
+                  ),
                 ),
-                prefixIcon: const Icon(Icons.label, color: Colors.blue),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(
+                    color: isDarkMode ? Colors.grey[700]! : Colors.grey[300]!,
+                  ),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(
+                    color: _selectedColor,
+                    width: 2,
+                  ),
+                ),
+                prefixIcon: Icon(Icons.label, color: _selectedColor),
               ),
             ),
             const SizedBox(height: 16),
@@ -410,7 +621,12 @@ class _NoteFormScreenState extends State<NoteFormScreen>
                 spacing: 8,
                 runSpacing: 8,
                 children: _tags.map((tag) => Chip(
-                  label: Text(tag),
+                  label: Text(
+                    tag,
+                    style: TextStyle(
+                      color: isDarkMode ? Colors.grey[300] : Colors.black87,
+                    ),
+                  ),
                   backgroundColor: _selectedColor.withValues(alpha: 0.1),
                   deleteIconColor: _selectedColor,
                   onDeleted: () {
@@ -425,7 +641,12 @@ class _NoteFormScreenState extends State<NoteFormScreen>
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancelar'),
+            child: Text(
+              'Cancelar',
+              style: TextStyle(
+                color: isDarkMode ? Colors.grey[400] : Colors.grey[700],
+              ),
+            ),
           ),
           ElevatedButton(
             onPressed: () {
@@ -451,10 +672,19 @@ class _NoteFormScreenState extends State<NoteFormScreen>
   }
 
   void _showNoteDetails() {
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    final isDarkMode = themeProvider.isDarkMode;
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Detalles de la nota'),
+        title: Text(
+          'Detalles de la nota',
+          style: TextStyle(
+            color: isDarkMode ? Colors.grey[300] : Colors.black87,
+          ),
+        ),
+        backgroundColor: isDarkMode ? Colors.grey[900] : Colors.white,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(25),
         ),
@@ -462,20 +692,25 @@ class _NoteFormScreenState extends State<NoteFormScreen>
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildDetailRow('Creada', widget.note?.createdAt ?? 'Ahora'),
+            _buildDetailRow('Creada', widget.note?.createdAt ?? 'Ahora', isDarkMode),
             if (widget.note?.updatedAt != null)
-              _buildDetailRow('Actualizada', widget.note!.updatedAt!),
-            _buildDetailRow('Tamaño', '${_contentController.text.length} caracteres'),
-            _buildDetailRow('Palabras', _contentController.text.split(' ').length.toString()),
-            const Divider(),
-            _buildDetailRow('Color', _getColorName(_selectedColor)),
-            _buildDetailRow('Etiquetas', _tags.isEmpty ? 'Sin etiquetas' : _tags.join(', ')),
+              _buildDetailRow('Actualizada', widget.note!.updatedAt!, isDarkMode),
+            _buildDetailRow('Tamaño', '${_contentController.text.length} caracteres', isDarkMode),
+            _buildDetailRow('Palabras', _contentController.text.split(' ').length.toString(), isDarkMode),
+            Divider(color: isDarkMode ? Colors.grey[700] : Colors.grey[300]),
+            _buildDetailRow('Color', _getColorName(_selectedColor), isDarkMode),
+            _buildDetailRow('Etiquetas', _tags.isEmpty ? 'Sin etiquetas' : _tags.join(', '), isDarkMode),
           ],
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cerrar'),
+            child: Text(
+              'Cerrar',
+              style: TextStyle(
+                color: isDarkMode ? Colors.grey[400] : Colors.grey[700],
+              ),
+            ),
           ),
         ],
       ),
@@ -494,7 +729,7 @@ class _NoteFormScreenState extends State<NoteFormScreen>
     return 'Personalizado';
   }
 
-  Widget _buildDetailRow(String label, String value) {
+  Widget _buildDetailRow(String label, String value, bool isDarkMode) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
@@ -504,14 +739,19 @@ class _NoteFormScreenState extends State<NoteFormScreen>
             width: 80,
             child: Text(
               '$label:',
-              style: const TextStyle(
+              style: TextStyle(
                 fontWeight: FontWeight.bold,
-                color: Colors.grey,
+                color: isDarkMode ? Colors.grey[500] : Colors.grey[600],
               ),
             ),
           ),
           Expanded(
-            child: Text(value),
+            child: Text(
+              value,
+              style: TextStyle(
+                color: isDarkMode ? Colors.grey[300] : Colors.black87,
+              ),
+            ),
           ),
         ],
       ),
@@ -519,18 +759,37 @@ class _NoteFormScreenState extends State<NoteFormScreen>
   }
 
   void _confirmDelete() {
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    final isDarkMode = themeProvider.isDarkMode;
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Eliminar nota'),
-        content: const Text('¿Estás seguro de que quieres eliminar esta nota?'),
+        title: Text(
+          'Eliminar nota',
+          style: TextStyle(
+            color: isDarkMode ? Colors.grey[300] : Colors.black87,
+          ),
+        ),
+        content: Text(
+          '¿Estás seguro de que quieres eliminar esta nota?',
+          style: TextStyle(
+            color: isDarkMode ? Colors.grey[400] : Colors.grey[700],
+          ),
+        ),
+        backgroundColor: isDarkMode ? Colors.grey[900] : Colors.white,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(25),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancelar'),
+            child: Text(
+              'Cancelar',
+              style: TextStyle(
+                color: isDarkMode ? Colors.grey[400] : Colors.grey[700],
+              ),
+            ),
           ),
           ElevatedButton(
             onPressed: () {
@@ -557,26 +816,55 @@ class _NoteFormScreenState extends State<NoteFormScreen>
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final isDarkMode = themeProvider.isDarkMode;
     final isEditing = widget.note != null;
 
     return Scaffold(
-      backgroundColor: Colors.grey[50],
+      backgroundColor: isDarkMode ? Colors.grey[850] : Colors.grey[50],
       appBar: AppBar(
         title: Text(
           isEditing ? 'Editar nota' : 'Nueva nota',
           style: const TextStyle(fontWeight: FontWeight.w600),
         ),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
+        backgroundColor: isDarkMode ? Colors.grey[900] : Colors.white,
+        foregroundColor: isDarkMode ? Colors.grey[300] : Colors.black,
         elevation: 0.5,
+        flexibleSpace: ClipRRect(
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+            child: Container(
+              color: Colors.transparent,
+            ),
+          ),
+        ),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+          icon: Icon(
+            Icons.arrow_back_ios_new,
+            color: isDarkMode ? Colors.grey[300] : Colors.grey[700],
+            size: 20,
+          ),
           onPressed: () => Navigator.pop(context),
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.more_vert),
-            onPressed: _showMoreMenu,
+          Container(
+            margin: const EdgeInsets.only(right: 8),
+            decoration: BoxDecoration(
+              color: _selectedColor.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: _selectedColor.withValues(alpha: 0.3),
+                width: 1,
+              ),
+            ),
+            child: IconButton(
+              icon: Icon(
+                Icons.more_vert,
+                color: _selectedColor,
+                size: 24,
+              ),
+              onPressed: _showMoreMenu,
+            ),
           ),
         ],
       ),
@@ -585,16 +873,24 @@ class _NoteFormScreenState extends State<NoteFormScreen>
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  CircularProgressIndicator(
-                    color: _selectedColor,
-                    strokeWidth: 3,
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: _selectedColor.withValues(alpha: 0.1),
+                    ),
+                    child: CircularProgressIndicator(
+                      color: _selectedColor,
+                      strokeWidth: 3,
+                    ),
                   ),
                   const SizedBox(height: 20),
                   Text(
                     'Guardando nota...',
                     style: TextStyle(
-                      color: Colors.grey[600],
+                      color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
                       fontSize: 16,
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
                 ],
@@ -606,73 +902,190 @@ class _NoteFormScreenState extends State<NoteFormScreen>
                 key: _formKey,
                 child: Column(
                   children: [
-                    // Categoría
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        'Sin categoría',
-                        style: TextStyle(
-                          color: Colors.grey[500],
-                          fontSize: 13,
+                    // Cabecera con categoría y fecha mejorada
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: isDarkMode 
+                            ? Colors.grey[800]!.withValues(alpha: 0.3)
+                            : Colors.grey[100]!.withValues(alpha: 0.5),
+                        borderRadius: BorderRadius.circular(15),
+                        border: Border.all(
+                          color: isDarkMode
+                              ? Colors.grey[700]!.withValues(alpha: 0.3)
+                              : Colors.grey[300]!.withValues(alpha: 0.5),
+                          width: 1,
                         ),
                       ),
-                    ),
-                    
-                    const SizedBox(height: 8),
-                    
-                    // Título
-                    TextFormField(
-                      controller: _titleController,
-                      style: const TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      decoration: const InputDecoration(
-                        hintText: 'Título',
-                        border: InputBorder.none,
-                        hintStyle: TextStyle(color: Colors.grey),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'El título es requerido';
-                        }
-                        return null;
-                      },
-                    ),
-                    
-                    const SizedBox(height: 4),
-                    
-                    // Fecha
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        'Hoy, ${_formatTime(DateTime.now())}',
-                        style: TextStyle(
-                          color: Colors.grey[500],
-                          fontSize: 13,
-                        ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: _selectedColor.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Icon(
+                              Icons.folder_outlined,
+                              color: _selectedColor,
+                              size: 16,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Sin categoría',
+                            style: TextStyle(
+                              color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const Spacer(),
+                          Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: _selectedColor.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Icon(
+                              Icons.access_time,
+                              color: _selectedColor,
+                              size: 14,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Hoy, ${_formatTime(DateTime.now())}',
+                            style: TextStyle(
+                              color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                     
                     const SizedBox(height: 20),
                     
-                    // Contenido
+                    // Título con decoración
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                width: 4,
+                                height: 28,
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    colors: [
+                                      _selectedColor,
+                                      _selectedColor.withValues(alpha: 0.5),
+                                    ],
+                                  ),
+                                  borderRadius: BorderRadius.circular(2),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: TextFormField(
+                                  controller: _titleController,
+                                  style: TextStyle(
+                                    fontSize: 26,
+                                    fontWeight: FontWeight.bold,
+                                    color: isDarkMode ? Colors.grey[200] : Colors.black87,
+                                  ),
+                                  decoration: InputDecoration(
+                                    hintText: 'Título',
+                                    border: InputBorder.none,
+                                    hintStyle: TextStyle(
+                                      color: isDarkMode ? Colors.grey[600] : Colors.grey[400],
+                                      fontSize: 26,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  validator: (value) {
+                                    if (value == null || value.isEmpty) {
+                                      return 'El título es requerido';
+                                    }
+                                    return null;
+                                  },
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    
+                    const SizedBox(height: 4),
+                    
+                    // Línea decorativa
+                    Padding(
+                      padding: const EdgeInsets.only(left: 16),
+                      child: Divider(
+                        color: isDarkMode 
+                            ? Colors.grey[700]!.withValues(alpha: 0.3)
+                            : Colors.grey[300]!.withValues(alpha: 0.5),
+                        thickness: 1,
+                      ),
+                    ),
+                    
+                    const SizedBox(height: 16),
+                    
+                    // Contenido con icono decorativo
                     Expanded(
-                      child: TextFormField(
-                        controller: _contentController,
-                        maxLines: null,
-                        expands: true,
-                        decoration: const InputDecoration(
-                          hintText: 'Nota aquí',
-                          border: InputBorder.none,
-                          hintStyle: TextStyle(color: Colors.grey),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              width: 4,
+                              height: 40,
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [
+                                    _selectedColor.withValues(alpha: 0.3),
+                                    Colors.transparent,
+                                  ],
+                                ),
+                                borderRadius: BorderRadius.circular(2),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: TextFormField(
+                                controller: _contentController,
+                                maxLines: null,
+                                expands: true,
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  height: 1.5,
+                                  color: isDarkMode ? Colors.grey[300] : Colors.black87,
+                                ),
+                                decoration: InputDecoration(
+                                  hintText: 'Escribe tu nota aquí...',
+                                  border: InputBorder.none,
+                                  hintStyle: TextStyle(
+                                    color: isDarkMode ? Colors.grey[600] : Colors.grey[400],
+                                    fontSize: 16,
+                                    fontStyle: FontStyle.italic,
+                                  ),
+                                ),
+                                validator: (value) {
+                                  if (value == null || value.isEmpty) {
+                                    return 'El contenido es requerido';
+                                  }
+                                  return null;
+                                },
+                              ),
+                            ),
+                          ],
                         ),
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'El contenido es requerido';
-                          }
-                          return null;
-                        },
                       ),
                     ),
                   ],
@@ -687,144 +1100,177 @@ class _NoteFormScreenState extends State<NoteFormScreen>
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: [
-                  Colors.white.withValues(alpha: 0.7),
-                  Colors.white.withValues(alpha: 0.9),
-                  _selectedColor.withValues(alpha: 0.2),
-                ],
+                colors: isDarkMode
+                    ? [
+                        Colors.grey[900]!.withValues(alpha: 0.8),
+                        Colors.grey[850]!.withValues(alpha: 0.9),
+                        _selectedColor.withValues(alpha: 0.3),
+                      ]
+                    : [
+                        Colors.white.withValues(alpha: 0.8),
+                        Colors.white.withValues(alpha: 0.95),
+                        _selectedColor.withValues(alpha: 0.15),
+                      ],
               ),
               border: Border(
                 top: BorderSide(
-                  color: Colors.white.withValues(alpha: 0.5),
+                  color: isDarkMode
+                      ? Colors.grey[700]!.withValues(alpha: 0.3)
+                      : Colors.white.withValues(alpha: 0.8),
                   width: 1,
                 ),
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.05),
+                  color: isDarkMode
+                      ? Colors.black.withValues(alpha: 0.2)
+                      : Colors.black.withValues(alpha: 0.05),
                   blurRadius: 10,
                   spreadRadius: 0,
+                  offset: const Offset(0, -2),
                 ),
                 BoxShadow(
                   color: _selectedColor.withValues(alpha: 0.1),
                   blurRadius: 20,
                   spreadRadius: -5,
+                  offset: const Offset(0, -2),
                 ),
               ],
             ),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Paleta de colores
-                  SizedBox(
-                    height: 40,
-                    child: ListView.builder(
-                      scrollDirection: Axis.horizontal,
-                      itemCount: _colorOptions.length,
-                      itemBuilder: (context, index) {
-                        final color = _colorOptions[index];
-                        return GestureDetector(
-                          onTap: () {
-                            setState(() {
-                              _selectedColor = color;
-                            });
-                            // Mostrar confirmación rápida
-                            SnackbarUtils.showInfoSnackbar(
-                              context,
-                              'Color aplicado',
+            child: ClipRRect(
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Paleta de colores mejorada
+                      Container(
+                        height: 50,
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        child: ListView.builder(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: _colorOptions.length,
+                          itemBuilder: (context, index) {
+                            final color = _colorOptions[index];
+                            return GestureDetector(
+                              onTap: () {
+                                setState(() {
+                                  _selectedColor = color;
+                                });
+                                SnackbarUtils.showInfoSnackbar(
+                                  context,
+                                  'Color aplicado',
+                                );
+                              },
+                              child: Container(
+                                width: 42,
+                                height: 42,
+                                margin: const EdgeInsets.only(right: 12),
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  gradient: RadialGradient(
+                                    colors: [
+                                      color,
+                                      color.withValues(alpha: 0.8),
+                                    ],
+                                  ),
+                                  border: Border.all(
+                                    color: _selectedColor == color
+                                        ? Colors.white
+                                        : Colors.transparent,
+                                    width: 3,
+                                  ),
+                                  boxShadow: [
+                                    if (_selectedColor == color)
+                                      BoxShadow(
+                                        color: color.withValues(alpha: 0.6),
+                                        blurRadius: 12,
+                                        spreadRadius: 2,
+                                      ),
+                                    BoxShadow(
+                                      color: color.withValues(alpha: 0.2),
+                                      blurRadius: 8,
+                                      spreadRadius: 1,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: _selectedColor == color
+                                    ? Icon(
+                                        Icons.check,
+                                        color: Colors.white,
+                                        size: 20,
+                                      )
+                                    : null,
+                              ),
                             );
                           },
-                          child: Container(
-                            width: 36,
-                            height: 36,
-                            margin: const EdgeInsets.only(right: 10),
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: color,
-                              border: Border.all(
-                                color: _selectedColor == color
-                                    ? Colors.white
-                                    : Colors.transparent,
-                                width: 3,
-                              ),
-                              boxShadow: [
-                                if (_selectedColor == color)
-                                  BoxShadow(
-                                    color: color.withValues(alpha: 0.5),
-                                    blurRadius: 10,
-                                    spreadRadius: 2,
-                                  ),
-                              ],
-                            ),
-                            child: _selectedColor == color
-                                ? const Icon(
-                                    Icons.check,
-                                    color: Colors.white,
-                                    size: 18,
-                                  )
-                                : null,
+                        ),
+                      ),
+                      
+                      const SizedBox(height: 12),
+                      
+                      // Acciones principales mejoradas
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          _buildGlassActionButton(
+                            icon: _isPinned ? Icons.push_pin : Icons.push_pin_outlined,
+                            label: 'Fijar',
+                            isActive: _isPinned,
+                            isDarkMode: isDarkMode,
+                            onTap: () {
+                              setState(() => _isPinned = !_isPinned);
+                              SnackbarUtils.showInfoSnackbar(
+                                context,
+                                _isPinned ? 'Nota fijada' : 'Nota no fijada',
+                              );
+                            },
                           ),
-                        );
-                      },
-                    ),
-                  ),
-                  
-                  const SizedBox(height: 12),
-                  
-                  // Acciones principales
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      _buildGlassActionButton(
-                        icon: _isPinned ? Icons.push_pin : Icons.push_pin_outlined,
-                        label: 'Fijar',
-                        isActive: _isPinned,
-                        onTap: () {
-                          setState(() => _isPinned = !_isPinned);
-                          SnackbarUtils.showInfoSnackbar(
-                            context,
-                            _isPinned ? 'Nota fijada' : 'Nota no fijada',
-                          );
-                        },
-                      ),
-                      _buildGlassActionButton(
-                        icon: Icons.alarm,
-                        label: 'Recordatorio',
-                        onTap: () {
-                          SnackbarUtils.showInfoSnackbar(
-                            context,
-                            'Funcionalidad próximamente',
-                          );
-                        },
-                      ),
-                      _buildGlassActionButton(
-                        icon: _isLocked ? Icons.lock : Icons.lock_outline,
-                        label: 'Bloquear',
-                        isActive: _isLocked,
-                        onTap: () {
-                          setState(() => _isLocked = !_isLocked);
-                          SnackbarUtils.showInfoSnackbar(
-                            context,
-                            _isLocked ? 'Nota bloqueada' : 'Nota desbloqueada',
-                          );
-                        },
-                      ),
-                      _buildGlassActionButton(
-                        icon: Icons.share,
-                        label: 'Compartir',
-                        onTap: _showShareDialog,
-                      ),
-                      _buildGlassActionButton(
-                        icon: Icons.save,
-                        label: 'Guardar',
-                        isActive: true,
-                        onTap: _saveNote,
+                          _buildGlassActionButton(
+                            icon: Icons.alarm,
+                            label: 'Recordar',
+                            isDarkMode: isDarkMode,
+                            onTap: () {
+                              SnackbarUtils.showInfoSnackbar(
+                                context,
+                                'Funcionalidad próximamente',
+                              );
+                            },
+                          ),
+                          _buildGlassActionButton(
+                            icon: _isLocked ? Icons.lock : Icons.lock_outline,
+                            label: 'Bloquear',
+                            isActive: _isLocked,
+                            isDarkMode: isDarkMode,
+                            onTap: () {
+                              setState(() => _isLocked = !_isLocked);
+                              SnackbarUtils.showInfoSnackbar(
+                                context,
+                                _isLocked ? 'Nota bloqueada' : 'Nota desbloqueada',
+                              );
+                            },
+                          ),
+                          _buildGlassActionButton(
+                            icon: Icons.share,
+                            label: 'Compartir',
+                            isDarkMode: isDarkMode,
+                            onTap: _showShareDialog,
+                          ),
+                          _buildGlassActionButton(
+                            icon: Icons.save,
+                            label: 'Guardar',
+                            isActive: true,
+                            isDarkMode: isDarkMode,
+                            onTap: _saveNote,
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                ],
+                ),
               ),
             ),
           );
@@ -837,45 +1283,68 @@ class _NoteFormScreenState extends State<NoteFormScreen>
     required IconData icon,
     required String label,
     required VoidCallback onTap,
+    required bool isDarkMode,
     bool isActive = false,
   }) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              isActive 
-                  ? _selectedColor.withValues(alpha: 0.2)
-                  : Colors.white.withValues(alpha: 0.5),
-              isActive
-                  ? _selectedColor.withValues(alpha: 0.1)
-                  : Colors.white.withValues(alpha: 0.8),
+              if (isActive) ...[
+                _selectedColor.withValues(alpha: 0.3),
+                _selectedColor.withValues(alpha: 0.2),
+              ] else ...[
+                isDarkMode 
+                    ? Colors.grey[800]!.withValues(alpha: 0.5)
+                    : Colors.white.withValues(alpha: 0.5),
+                isDarkMode
+                    ? Colors.grey[700]!.withValues(alpha: 0.3)
+                    : Colors.white.withValues(alpha: 0.3),
+              ],
             ],
           ),
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(25),
           border: Border.all(
-            color: Colors.white.withValues(alpha: 0.8),
+            color: isActive
+                ? _selectedColor.withValues(alpha: 0.5)
+                : (isDarkMode
+                    ? Colors.grey[600]!.withValues(alpha: 0.3)
+                    : Colors.grey[300]!.withValues(alpha: 0.3)),
             width: 1,
           ),
+          boxShadow: [
+            if (isActive)
+              BoxShadow(
+                color: _selectedColor.withValues(alpha: 0.3),
+                blurRadius: 8,
+                spreadRadius: 0,
+                offset: const Offset(0, 2),
+              ),
+          ],
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
               icon,
-              color: isActive ? _selectedColor : Colors.grey[600],
-              size: 22,
+              color: isActive 
+                  ? _selectedColor 
+                  : (isDarkMode ? Colors.grey[400] : Colors.grey[600]),
+              size: 20,
             ),
             const SizedBox(height: 2),
             Text(
               label,
               style: TextStyle(
-                color: isActive ? _selectedColor : Colors.grey[600],
-                fontSize: 11,
+                color: isActive 
+                    ? _selectedColor 
+                    : (isDarkMode ? Colors.grey[400] : Colors.grey[600]),
+                fontSize: 10,
                 fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
               ),
             ),

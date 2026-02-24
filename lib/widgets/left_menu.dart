@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'dart:ui';
-import '../screens/calendar_screen.dart'; // ✅ Importar la pantalla de calendario
+import 'package:provider/provider.dart';
+import '../screens/calendar_screen.dart';
+import '../providers/theme_provider.dart';
 
 class LeftMenu extends StatefulWidget {
   final VoidCallback onClose;
@@ -50,6 +52,9 @@ class _LeftMenuState extends State<LeftMenu>
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final isDarkMode = themeProvider.isDarkMode;
+
     return Drawer(
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.horizontal(right: Radius.circular(30)),
@@ -63,21 +68,31 @@ class _LeftMenuState extends State<LeftMenu>
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: [
-                  Colors.white.withValues(alpha: 0.95),
-                  Colors.blue.shade50.withValues(alpha: 0.9),
-                  Colors.white.withValues(alpha: 0.95),
-                ],
+                colors: isDarkMode
+                    ? [
+                        Colors.grey[900]!.withValues(alpha: 0.95),
+                        Colors.grey[850]!.withValues(alpha: 0.9),
+                        Colors.grey[900]!.withValues(alpha: 0.95),
+                      ]
+                    : [
+                        Colors.white.withValues(alpha: 0.95),
+                        Colors.blue.shade50.withValues(alpha: 0.9),
+                        Colors.white.withValues(alpha: 0.95),
+                      ],
               ),
               borderRadius: const BorderRadius.horizontal(right: Radius.circular(30)),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.1),
+                  color: isDarkMode 
+                      ? Colors.black.withValues(alpha: 0.3)
+                      : Colors.black.withValues(alpha: 0.1),
                   blurRadius: 20,
                   spreadRadius: 0,
                 ),
                 BoxShadow(
-                  color: Colors.blue.withValues(alpha: _glassAnimation.value * 0.3),
+                  color: isDarkMode
+                      ? Colors.blue.withValues(alpha: _glassAnimation.value * 0.2)
+                      : Colors.blue.withValues(alpha: _glassAnimation.value * 0.3),
                   blurRadius: 30,
                   spreadRadius: 0,
                 ),
@@ -88,62 +103,107 @@ class _LeftMenuState extends State<LeftMenu>
               child: BackdropFilter(
                 filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
                 child: Container(
-                  color: Colors.white.withValues(alpha: 0.3),
+                  color: isDarkMode
+                      ? Colors.grey[900]!.withValues(alpha: 0.3)
+                      : Colors.white.withValues(alpha: 0.3),
                   child: SafeArea(
                     child: Column(
                       children: [
-                        // HEADER CON TÍTULO Y BOTÓN CERRAR
+                        // HEADER CON TÍTULO Y BOTÓN CERRAR - COLOR DISTINTIVO
                         Container(
                           padding: const EdgeInsets.fromLTRB(20, 20, 20, 30),
                           decoration: BoxDecoration(
                             gradient: LinearGradient(
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
-                              colors: [
-                                Colors.blue.shade400,
-                                Colors.blue.shade600,
-                                Colors.blue.shade800,
-                              ],
+                              colors: isDarkMode
+                                  ? [
+                                      Colors.purple.shade800.withValues(alpha: 0.9),
+                                      Colors.deepPurple.shade700.withValues(alpha: 0.9),
+                                      Colors.indigo.shade800.withValues(alpha: 0.9),
+                                    ]
+                                  : [
+                                      Colors.purple.shade600.withValues(alpha: 0.9),
+                                      Colors.deepPurple.shade500.withValues(alpha: 0.9),
+                                      Colors.indigo.shade600.withValues(alpha: 0.9),
+                                    ],
                             ),
                             borderRadius: const BorderRadius.only(
-                              bottomLeft: Radius.circular(30),
-                              bottomRight: Radius.circular(30),
+                              bottomLeft: Radius.circular(40),
+                              bottomRight: Radius.circular(40),
                             ),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.blue.withValues(alpha: 0.3),
+                                color: isDarkMode
+                                    ? Colors.deepPurple.withValues(alpha: 0.3)
+                                    : Colors.deepPurple.withValues(alpha: 0.4),
                                 blurRadius: 20,
                                 offset: const Offset(0, 5),
                               ),
                             ],
                           ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              const Text(
-                                'QuickNote', // ✅ Cambiado de EasyNotes a QuickNote
-                                style: TextStyle(
-                                  fontSize: 24,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                  letterSpacing: 1,
+                          child: BackdropFilter(
+                            filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(8),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white.withValues(alpha: 0.2),
+                                        borderRadius: BorderRadius.circular(15),
+                                        border: Border.all(
+                                          color: Colors.white.withValues(alpha: 0.3),
+                                          width: 1,
+                                        ),
+                                      ),
+                                      child: Icon(
+                                        Icons.note_alt,
+                                        color: Colors.white.withValues(alpha: 0.9),
+                                        size: 28,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Text(
+                                      'QuickNote',
+                                      style: TextStyle(
+                                        fontSize: 24,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white.withValues(alpha: 0.95),
+                                        letterSpacing: 1,
+                                        shadows: [
+                                          Shadow(
+                                            color: Colors.black.withValues(alpha: 0.2),
+                                            blurRadius: 10,
+                                            offset: const Offset(0, 2),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                              ),
-                              Container(
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withValues(alpha: 0.2),
-                                  borderRadius: BorderRadius.circular(15),
-                                  border: Border.all(
-                                    color: Colors.white.withValues(alpha: 0.3),
-                                    width: 1,
+                                Container(
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withValues(alpha: 0.2),
+                                    borderRadius: BorderRadius.circular(15),
+                                    border: Border.all(
+                                      color: Colors.white.withValues(alpha: 0.3),
+                                      width: 1,
+                                    ),
+                                  ),
+                                  child: IconButton(
+                                    icon: Icon(
+                                      Icons.close, 
+                                      color: Colors.white.withValues(alpha: 0.9), 
+                                      size: 22
+                                    ),
+                                    onPressed: widget.onClose,
                                   ),
                                 ),
-                                child: IconButton(
-                                  icon: const Icon(Icons.close, color: Colors.white, size: 22),
-                                  onPressed: widget.onClose,
-                                ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                         ),
 
@@ -152,114 +212,136 @@ class _LeftMenuState extends State<LeftMenu>
                           child: ListView(
                             padding: const EdgeInsets.symmetric(vertical: 16),
                             children: [
-                              // SECCIÓN: TODAS LAS NOTAS
-                              _buildSectionTitle('Todas las notas'),
+                              // SECCIÓN: TODAS LAS NOTAS - COLOR AZUL
+                              _buildSectionTitle('Todas las notas', isDarkMode),
                               _buildGlassButton(
                                 label: 'Todas',
                                 icon: Icons.note,
+                                color: Colors.blue,
                                 onTap: () {},
+                                isDarkMode: isDarkMode,
                               ),
-                              _buildSubButton('Personal', onTap: () {}),
-                              _buildSubButton('Trabajo', onTap: () {}),
+                              _buildSubButton('Personal', onTap: () {}, isDarkMode: isDarkMode),
+                              _buildSubButton('Trabajo', onTap: () {}, isDarkMode: isDarkMode),
 
                               const SizedBox(height: 16),
 
-                              // SECCIÓN: CALENDARIO (CON NAVEGACIÓN)
-                              _buildSectionTitle('Calendario'),
+                              // SECCIÓN: CALENDARIO - COLOR VERDE
+                              _buildSectionTitle('Calendario', isDarkMode),
                               _buildGlassButton(
                                 label: 'Ver calendario',
                                 icon: Icons.calendar_today,
-                                onTap: _navigateToCalendar, // ✅ Navega a CalendarScreen
+                                color: Colors.green,
+                                onTap: _navigateToCalendar,
+                                isDarkMode: isDarkMode,
                               ),
 
                               const SizedBox(height: 16),
 
-                              // SECCIÓN: RECORDATORIO
-                              _buildSectionTitle('Recordatorio'),
+                              // SECCIÓN: RECORDATORIO - COLOR NARANJA
+                              _buildSectionTitle('Recordatorio', isDarkMode),
                               _buildGlassButton(
                                 label: 'Recordatorios',
                                 icon: Icons.alarm,
+                                color: Colors.orange,
                                 onTap: () {},
+                                isDarkMode: isDarkMode,
                               ),
 
                               const SizedBox(height: 16),
 
-                              // SECCIÓN: FAVORITOS
-                              _buildSectionTitle('Favoritos'),
+                              // SECCIÓN: FAVORITOS - COLOR AMARILLO
+                              _buildSectionTitle('Favoritos', isDarkMode),
                               _buildGlassButton(
                                 label: 'Notas favoritas',
                                 icon: Icons.star,
+                                color: Colors.amber,
                                 onTap: () {},
+                                isDarkMode: isDarkMode,
                               ),
 
                               const SizedBox(height: 16),
 
-                              // SECCIÓN: ETIQUETAS
-                              _buildSectionTitle('Etiquetas'),
+                              // SECCIÓN: ETIQUETAS - COLOR PÚRPURA
+                              _buildSectionTitle('Etiquetas', isDarkMode),
                               _buildGlassButton(
                                 label: 'Todas las etiquetas',
                                 icon: Icons.label,
+                                color: Colors.purple,
                                 onTap: () {},
+                                isDarkMode: isDarkMode,
                               ),
 
                               const SizedBox(height: 16),
 
-                              // SECCIÓN: ARCHIVAR
-                              _buildSectionTitle('Archivar'),
+                              // SECCIÓN: ARCHIVAR - COLOR TEAL
+                              _buildSectionTitle('Archivar', isDarkMode),
                               _buildGlassButton(
                                 label: 'Notas archivadas',
                                 icon: Icons.archive,
+                                color: Colors.teal,
                                 onTap: () {},
+                                isDarkMode: isDarkMode,
                               ),
 
                               const SizedBox(height: 16),
 
-                              // SECCIÓN: PAPELERA
-                              _buildSectionTitle('Papelera'),
+                              // SECCIÓN: PAPELERA - COLOR ROJO
+                              _buildSectionTitle('Papelera', isDarkMode),
                               _buildGlassButton(
                                 label: 'Papelera',
                                 icon: Icons.delete,
+                                color: Colors.red,
                                 onTap: () {},
+                                isDarkMode: isDarkMode,
                               ),
 
                               const SizedBox(height: 16),
 
-                              // SECCIÓN: WIDGET
-                              _buildSectionTitle('Widget'),
+                              // SECCIÓN: WIDGET - COLOR ROSA
+                              _buildSectionTitle('Widget', isDarkMode),
                               _buildGlassButton(
                                 label: 'Configurar widget',
                                 icon: Icons.widgets,
+                                color: Colors.pink,
                                 onTap: () {},
+                                isDarkMode: isDarkMode,
                               ),
 
                               const SizedBox(height: 16),
 
-                              // SECCIÓN: SINCRONIZAR
-                              _buildSectionTitle('Sincronizar y respaldar'),
+                              // SECCIÓN: SINCRONIZAR - COLOR CELESTE
+                              _buildSectionTitle('Sincronizar y respaldar', isDarkMode),
                               _buildGlassButton(
                                 label: 'Sincronizar ahora',
                                 icon: Icons.sync,
+                                color: Colors.lightBlue,
                                 onTap: () {},
+                                isDarkMode: isDarkMode,
                               ),
 
                               const SizedBox(height: 16),
 
-                              // SECCIÓN: AYUDA
-                              _buildSectionTitle('Centro de ayuda'),
+                              // SECCIÓN: AYUDA - COLOR INDIGO
+                              _buildSectionTitle('Centro de ayuda', isDarkMode),
                               _buildGlassButton(
                                 label: 'Ayuda y soporte',
                                 icon: Icons.help,
+                                color: Colors.indigo,
                                 onTap: () {},
+                                isDarkMode: isDarkMode,
                               ),
 
                               const SizedBox(height: 16),
 
-                              // SECCIÓN: AJUSTES
-                              _buildSectionTitle('Ajustes'),
+                              // SECCIÓN: AJUSTES - COLOR GRIS
+                              _buildSectionTitle('Ajustes', isDarkMode),
                               _buildGlassButton(
                                 label: 'Configuración',
                                 icon: Icons.settings,
+                                color: Colors.grey,
                                 onTap: () {},
+                                isDarkMode: isDarkMode,
                               ),
 
                               const SizedBox(height: 30),
@@ -279,80 +361,146 @@ class _LeftMenuState extends State<LeftMenu>
   }
 
   // Widget para título de sección
-  Widget _buildSectionTitle(String title) {
+  Widget _buildSectionTitle(String title, bool isDarkMode) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
-      child: Text(
-        title,
-        style: TextStyle(
-          fontSize: 14,
-          fontWeight: FontWeight.bold,
-          color: Colors.grey[600],
-          letterSpacing: 0.5,
-        ),
+      child: Row(
+        children: [
+          Container(
+            width: 4,
+            height: 18,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  Colors.blue.shade400,
+                  Colors.purple.shade400,
+                ],
+              ),
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+              letterSpacing: 0.5,
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  // Widget para botones principales con efecto glass
+  // Widget para botones principales con efecto glass mejorado
   Widget _buildGlassButton({
     required String label,
     required IconData icon,
     required VoidCallback onTap,
+    required bool isDarkMode,
+    Color? color,
     EdgeInsetsGeometry? margin,
   }) {
+    final buttonColor = color ?? Colors.blue;
+    
     return Container(
       margin: margin ?? const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            Colors.white.withValues(alpha: 0.7),
-            Colors.white.withValues(alpha: 0.9),
-            Colors.blue.shade50.withValues(alpha: 0.5),
-          ],
+          colors: isDarkMode
+              ? [
+                  buttonColor.withValues(alpha: 0.2),
+                  Colors.grey[800]!.withValues(alpha: 0.7),
+                  Colors.grey[800]!.withValues(alpha: 0.5),
+                ]
+              : [
+                  buttonColor.withValues(alpha: 0.1),
+                  Colors.white.withValues(alpha: 0.8),
+                  Colors.white.withValues(alpha: 0.6),
+                ],
         ),
-        borderRadius: BorderRadius.circular(15),
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: Colors.white.withValues(alpha: 0.8),
-          width: 1,
+          color: isDarkMode
+              ? buttonColor.withValues(alpha: 0.3)
+              : buttonColor.withValues(alpha: 0.2),
+          width: 1.5,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.blue.withValues(alpha: 0.1),
-            blurRadius: 10,
-            spreadRadius: 0,
+            color: buttonColor.withValues(alpha: isDarkMode ? 0.15 : 0.2),
+            blurRadius: 12,
+            spreadRadius: 1,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(15),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-            child: Row(
-              children: [
-                Icon(icon, color: Colors.blue, size: 20),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Text(
-                    label,
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.black87,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(20),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: onTap,
+              borderRadius: BorderRadius.circular(20),
+              splashColor: buttonColor.withValues(alpha: 0.2),
+              highlightColor: buttonColor.withValues(alpha: 0.1),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            buttonColor.withValues(alpha: 0.3),
+                            buttonColor.withValues(alpha: 0.1),
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: buttonColor.withValues(alpha: 0.3),
+                          width: 1,
+                        ),
+                      ),
+                      child: Icon(
+                        icon, 
+                        color: buttonColor, 
+                        size: 22,
+                      ),
                     ),
-                  ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Text(
+                        label,
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: isDarkMode ? Colors.grey[200] : Colors.black87,
+                        ),
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: buttonColor.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(
+                        Icons.arrow_forward_ios,
+                        size: 14,
+                        color: buttonColor,
+                      ),
+                    ),
+                  ],
                 ),
-                Icon(
-                  Icons.arrow_forward_ios,
-                  size: 14,
-                  color: Colors.grey[400],
-                ),
-              ],
+              ),
             ),
           ),
         ),
@@ -360,38 +508,59 @@ class _LeftMenuState extends State<LeftMenu>
     );
   }
 
-  // Widget para sub-botones (como Personal, Trabajo, etc.)
-  Widget _buildSubButton(String label, {required VoidCallback onTap}) {
+  // Widget para sub-botones (como Personal, Trabajo, etc.) con efecto glass mejorado
+  Widget _buildSubButton(String label, {required VoidCallback onTap, required bool isDarkMode}) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.5),
-        borderRadius: BorderRadius.circular(12),
+        gradient: LinearGradient(
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+          colors: isDarkMode
+              ? [
+                  Colors.grey[800]!.withValues(alpha: 0.5),
+                  Colors.grey[700]!.withValues(alpha: 0.3),
+                ]
+              : [
+                  Colors.grey[100]!.withValues(alpha: 0.7),
+                  Colors.white.withValues(alpha: 0.5),
+                ],
+        ),
+        borderRadius: BorderRadius.circular(15),
         border: Border.all(
-          color: Colors.grey.shade200,
+          color: isDarkMode 
+              ? Colors.grey[600]!.withValues(alpha: 0.3)
+              : Colors.grey.shade200,
           width: 1,
         ),
       ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(12),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: Row(
-              children: [
-                const SizedBox(width: 36), // Alineación con los iconos
-                Expanded(
-                  child: Text(
-                    label,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey[700],
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(15),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 4, sigmaY: 4),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: onTap,
+              borderRadius: BorderRadius.circular(15),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                child: Row(
+                  children: [
+                    const SizedBox(width: 42), // Alineación con los iconos
+                    Expanded(
+                      child: Text(
+                        label,
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          color: isDarkMode ? Colors.grey[300] : Colors.grey[700],
+                        ),
+                      ),
                     ),
-                  ),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
         ),

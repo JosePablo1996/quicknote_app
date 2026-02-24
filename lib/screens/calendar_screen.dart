@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../models/note.dart';
 import '../services/api_service.dart';
+import '../providers/theme_provider.dart';
 import 'note_detail_screen.dart';
 
 class CalendarScreen extends StatefulWidget {
@@ -48,29 +50,49 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final isDarkMode = themeProvider.isDarkMode;
+
     return Scaffold(
-      backgroundColor: Colors.grey[50],
+      backgroundColor: isDarkMode ? Colors.grey[900] : Colors.grey[50],
       appBar: AppBar(
-        title: const Text(
+        title: Text(
           'Calendario',
-          style: TextStyle(fontWeight: FontWeight.bold),
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: isDarkMode ? Colors.white : Colors.black,
+          ),
         ),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
+        backgroundColor: isDarkMode ? Colors.grey[850] : Colors.white,
+        foregroundColor: isDarkMode ? Colors.white : Colors.black,
         elevation: 0.5,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+          icon: Icon(
+            Icons.arrow_back,
+            color: isDarkMode ? Colors.white : Colors.black,
+          ),
           onPressed: () => Navigator.pop(context),
         ),
         actions: [
-          IconButton(
-            icon: Icon(_isWeeklyView ? Icons.calendar_month : Icons.view_week),
-            onPressed: () {
-              setState(() {
-                _isWeeklyView = !_isWeeklyView;
-              });
-            },
-            tooltip: _isWeeklyView ? 'Vista mensual' : 'Vista semanal',
+          Container(
+            margin: const EdgeInsets.only(right: 8),
+            decoration: BoxDecoration(
+              color: isDarkMode ? Colors.grey[800] : Colors.grey[200],
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: IconButton(
+              icon: Icon(
+                _isWeeklyView ? Icons.calendar_month : Icons.view_week,
+                color: isDarkMode ? Colors.white : Colors.blue,
+                size: 22,
+              ),
+              onPressed: () {
+                setState(() {
+                  _isWeeklyView = !_isWeeklyView;
+                });
+              },
+              tooltip: _isWeeklyView ? 'Vista mensual' : 'Vista semanal',
+            ),
           ),
         ],
       ),
@@ -78,11 +100,44 @@ class _CalendarScreenState extends State<CalendarScreen> {
         future: _futureNotes,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return Center(
+              child: CircularProgressIndicator(
+                color: Colors.blue,
+                strokeWidth: 3,
+              ),
+            );
           }
 
           if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.error_outline,
+                    size: 60,
+                    color: Colors.red[400],
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
+                    'Error al cargar el calendario',
+                    style: TextStyle(
+                      fontSize: 18,
+                      color: isDarkMode ? Colors.white70 : Colors.grey[800],
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  ElevatedButton(
+                    onPressed: _loadNotes,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue,
+                      foregroundColor: Colors.white,
+                    ),
+                    child: const Text('Reintentar'),
+                  ),
+                ],
+              ),
+            );
           }
 
           final notes = snapshot.data ?? [];
@@ -92,7 +147,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
               // Selector de fecha
               Container(
                 padding: const EdgeInsets.all(16),
-                color: Colors.white,
+                color: isDarkMode ? Colors.grey[850] : Colors.white,
                 child: Column(
                   children: [
                     // Mes y año
@@ -100,7 +155,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         IconButton(
-                          icon: const Icon(Icons.chevron_left),
+                          icon: Icon(
+                            Icons.chevron_left,
+                            color: isDarkMode ? Colors.white70 : Colors.grey[800],
+                          ),
                           onPressed: () {
                             setState(() {
                               _selectedDate = DateTime(
@@ -113,13 +171,17 @@ class _CalendarScreenState extends State<CalendarScreen> {
                         ),
                         Text(
                           '${_months[_selectedDate.month - 1]} ${_selectedDate.year}',
-                          style: const TextStyle(
-                            fontSize: 18,
+                          style: TextStyle(
+                            fontSize: 20,
                             fontWeight: FontWeight.bold,
+                            color: isDarkMode ? Colors.white : Colors.black87,
                           ),
                         ),
                         IconButton(
-                          icon: const Icon(Icons.chevron_right),
+                          icon: Icon(
+                            Icons.chevron_right,
+                            color: isDarkMode ? Colors.white70 : Colors.grey[800],
+                          ),
                           onPressed: () {
                             setState(() {
                               _selectedDate = DateTime(
@@ -137,15 +199,15 @@ class _CalendarScreenState extends State<CalendarScreen> {
                     
                     // Vista del calendario
                     _isWeeklyView
-                        ? _buildWeeklyView(notes)
-                        : _buildMonthlyView(notes),
+                        ? _buildWeeklyView(notes, isDarkMode)
+                        : _buildMonthlyView(notes, isDarkMode),
                   ],
                 ),
               ),
               
               // Lista de notas del día seleccionado
               Expanded(
-                child: _buildNotesForSelectedDay(notes),
+                child: _buildNotesForSelectedDay(notes, isDarkMode),
               ),
             ],
           );
@@ -154,7 +216,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
   }
 
-  Widget _buildMonthlyView(List<Note> notes) {
+  Widget _buildMonthlyView(List<Note> notes, bool isDarkMode) {
     final daysInMonth = DateTime(_selectedDate.year, _selectedDate.month + 1, 0).day;
     final firstDayOfMonth = DateTime(_selectedDate.year, _selectedDate.month, 1);
     final startingWeekday = firstDayOfMonth.weekday;
@@ -171,7 +233,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
-                        color: Colors.grey[600],
+                        color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
                       ),
                     ),
                   ))
@@ -188,13 +250,13 @@ class _CalendarScreenState extends State<CalendarScreen> {
             crossAxisCount: 7,
             childAspectRatio: 1,
           ),
-          itemCount: 42, // 6 semanas
+          itemCount: 42,
           itemBuilder: (context, index) {
             final day = index - startingWeekday + 2;
             final date = DateTime(_selectedDate.year, _selectedDate.month, day);
             
             if (day < 1 || day > daysInMonth) {
-              return Container(); // Días fuera del mes
+              return Container();
             }
             
             final notesForDay = _getNotesForDate(notes, date);
@@ -211,7 +273,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
               child: Container(
                 margin: const EdgeInsets.all(2),
                 decoration: BoxDecoration(
-                  color: isSelected ? Colors.blue : null,
+                  color: isSelected 
+                      ? Colors.blue 
+                      : (isDarkMode ? Colors.grey[800] : null),
                   shape: BoxShape.circle,
                 ),
                 child: Stack(
@@ -220,7 +284,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
                       child: Text(
                         day.toString(),
                         style: TextStyle(
-                          color: isSelected ? Colors.white : Colors.black87,
+                          color: isSelected 
+                              ? Colors.white 
+                              : (isDarkMode ? Colors.white70 : Colors.black87),
                           fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                         ),
                       ),
@@ -233,7 +299,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                           width: 6,
                           height: 6,
                           decoration: BoxDecoration(
-                            color: Colors.blue,
+                            color: isSelected ? Colors.white : Colors.blue,
                             shape: BoxShape.circle,
                           ),
                         ),
@@ -248,14 +314,14 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
   }
 
-  Widget _buildWeeklyView(List<Note> notes) {
+  Widget _buildWeeklyView(List<Note> notes, bool isDarkMode) {
     final weekDays = _getWeekDays(_selectedDate);
     
     return Column(
       children: [
         // Días de la semana
         SizedBox(
-          height: 80,
+          height: 90,
           child: Row(
             children: weekDays.map((date) {
               final notesForDay = _getNotesForDate(notes, date);
@@ -273,8 +339,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   child: Container(
                     margin: const EdgeInsets.all(2),
                     decoration: BoxDecoration(
-                      color: isSelected ? Colors.blue : null,
-                      borderRadius: BorderRadius.circular(10),
+                      color: isSelected 
+                          ? Colors.blue 
+                          : (isDarkMode ? Colors.grey[800] : Colors.grey[100]),
+                      borderRadius: BorderRadius.circular(12),
                     ),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -283,16 +351,20 @@ class _CalendarScreenState extends State<CalendarScreen> {
                           _weekDays[date.weekday - 1],
                           style: TextStyle(
                             fontSize: 12,
-                            color: isSelected ? Colors.white : Colors.grey[600],
+                            color: isSelected 
+                                ? Colors.white 
+                                : (isDarkMode ? Colors.grey[400] : Colors.grey[600]),
                           ),
                         ),
                         const SizedBox(height: 4),
                         Text(
                           date.day.toString(),
                           style: TextStyle(
-                            fontSize: 16,
+                            fontSize: 18,
                             fontWeight: FontWeight.bold,
-                            color: isSelected ? Colors.white : Colors.black87,
+                            color: isSelected 
+                                ? Colors.white 
+                                : (isDarkMode ? Colors.white70 : Colors.black87),
                           ),
                         ),
                         if (notesForDay.isNotEmpty)
@@ -317,7 +389,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
   }
 
-  Widget _buildNotesForSelectedDay(List<Note> notes) {
+  Widget _buildNotesForSelectedDay(List<Note> notes, bool isDarkMode) {
     final notesForDay = _getNotesForDate(notes, _selectedDate);
     
     if (notesForDay.isEmpty) {
@@ -328,14 +400,14 @@ class _CalendarScreenState extends State<CalendarScreen> {
             Icon(
               Icons.event_note,
               size: 60,
-              color: Colors.grey[400],
+              color: isDarkMode ? Colors.grey[600] : Colors.grey[400],
             ),
             const SizedBox(height: 16),
             Text(
               'No hay notas para este día',
               style: TextStyle(
                 fontSize: 16,
-                color: Colors.grey[600],
+                color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
               ),
             ),
           ],
@@ -350,24 +422,41 @@ class _CalendarScreenState extends State<CalendarScreen> {
         final note = notesForDay[index];
         return Card(
           margin: const EdgeInsets.only(bottom: 12),
+          color: isDarkMode ? Colors.grey[850] : Colors.white,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(15),
           ),
           child: ListTile(
             title: Text(
               note.title,
-              style: const TextStyle(fontWeight: FontWeight.bold),
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: isDarkMode ? Colors.white : Colors.black87,
+              ),
             ),
             subtitle: Text(
               note.content,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-            ),
-            trailing: Text(
-              _formatTime(note.createdAt),
               style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey[600],
+                color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+              ),
+            ),
+            trailing: Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 10,
+                vertical: 5,
+              ),
+              decoration: BoxDecoration(
+                color: isDarkMode ? Colors.grey[700] : Colors.grey[200],
+                borderRadius: BorderRadius.circular(15),
+              ),
+              child: Text(
+                _formatTime(note.createdAt),
+                style: TextStyle(
+                  fontSize: 12,
+                  color: isDarkMode ? Colors.white70 : Colors.grey[600],
+                ),
               ),
             ),
             onTap: () {
