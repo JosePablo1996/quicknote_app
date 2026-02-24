@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:ui';
-import 'package:provider/provider.dart'; // ✅ Añadir provider
-import '../providers/theme_provider.dart'; // ✅ Importar ThemeProvider
+import 'package:provider/provider.dart';
+import '../providers/theme_provider.dart';
 
 class NoteMenu extends StatefulWidget {
   final VoidCallback onViewList;
@@ -73,15 +73,18 @@ class _NoteMenuState extends State<NoteMenu>
   }
 
   void _handleTap(VoidCallback action) {
+    // Primero cerramos el diálogo con animación
     _animationController.reverse().then((_) {
-      Navigator.pop(context);
-      action();
+      if (mounted) {
+        Navigator.pop(context);
+        // Luego ejecutamos la acción después de cerrar el diálogo
+        action();
+      }
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    // ✅ Obtener el estado del tema
     final themeProvider = Provider.of<ThemeProvider>(context);
     final isDarkMode = themeProvider.isDarkMode;
 
@@ -155,7 +158,7 @@ class _NoteMenuState extends State<NoteMenu>
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Header con efecto vidrio más pronunciado
+                    // Header
                     Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 20,
@@ -261,14 +264,6 @@ class _NoteMenuState extends State<NoteMenu>
                             index: 3,
                             color: Colors.purple,
                             onTap: () => _handleTap(widget.onSync),
-                            isDarkMode: isDarkMode,
-                          ),
-                          _buildAnimatedMenuItem(
-                            icon: Icons.import_export,
-                            label: 'Importar',
-                            index: 4,
-                            color: Colors.teal,
-                            onTap: () => _handleTap(widget.onImport),
                             isDarkMode: isDarkMode,
                           ),
                         ],
@@ -398,7 +393,7 @@ class _NoteMenuState extends State<NoteMenu>
                     ),
                   ),
                   
-                  // Toggle vidrioso mejorado
+                  // Toggle vidrioso
                   Container(
                     width: 44,
                     height: 24,
@@ -424,7 +419,6 @@ class _NoteMenuState extends State<NoteMenu>
                     ),
                     child: Stack(
                       children: [
-                        // Puntos decorativos
                         Positioned(
                           left: 4,
                           top: 4,
@@ -449,8 +443,6 @@ class _NoteMenuState extends State<NoteMenu>
                             ),
                           ),
                         ),
-                        
-                        // Círculo central con efecto vidrioso
                         Center(
                           child: Container(
                             width: 18,
