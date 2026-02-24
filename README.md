@@ -1,6 +1,6 @@
 # QuickNote 📝
 
-QuickNote es una aplicación de notas moderna y elegante desarrollada con Flutter, diseñada para ofrecer una experiencia de usuario fluida y visualmente atractiva. Con sincronización en la nube, calendario integrado y una interfaz con efectos Liquid Glass, QuickNote transforma la manera de tomar notas.
+QuickNote es una aplicación de notas moderna y elegante desarrollada con Flutter, diseñada para ofrecer una experiencia de usuario fluida y visualmente atractiva. Con sincronización en la nube, calendario integrado y una interfaz con efectos visuales atractivos y modernos, QuickNote transforma la manera de tomar notas.
 
 ## 🎯 Características Principales
 
