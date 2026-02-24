@@ -120,23 +120,23 @@ class _LeftMenuState extends State<LeftMenu>
                   child: SafeArea(
                     child: Column(
                       children: [
-                        // HEADER CON TÍTULO Y BOTÓN CERRAR - COLOR DISTINTIVO
+                        // HEADER CON TÍTULO MEJORADO Y VERSIÓN
                         Container(
-                          padding: const EdgeInsets.fromLTRB(20, 20, 20, 30),
+                          padding: const EdgeInsets.fromLTRB(20, 20, 20, 25),
                           decoration: BoxDecoration(
                             gradient: LinearGradient(
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
                               colors: isDarkMode
                                   ? [
+                                      Colors.deepPurple.shade900.withValues(alpha: 0.95),
                                       Colors.purple.shade800.withValues(alpha: 0.9),
-                                      Colors.deepPurple.shade700.withValues(alpha: 0.9),
-                                      Colors.indigo.shade800.withValues(alpha: 0.9),
+                                      Colors.indigo.shade900.withValues(alpha: 0.95),
                                     ]
                                   : [
+                                      Colors.deepPurple.shade700.withValues(alpha: 0.95),
                                       Colors.purple.shade600.withValues(alpha: 0.9),
-                                      Colors.deepPurple.shade500.withValues(alpha: 0.9),
-                                      Colors.indigo.shade600.withValues(alpha: 0.9),
+                                      Colors.indigo.shade700.withValues(alpha: 0.95),
                                     ],
                             ),
                             borderRadius: const BorderRadius.only(
@@ -145,23 +145,98 @@ class _LeftMenuState extends State<LeftMenu>
                             ),
                             boxShadow: [
                               BoxShadow(
-                                color: isDarkMode
-                                    ? Colors.deepPurple.withValues(alpha: 0.3)
-                                    : Colors.deepPurple.withValues(alpha: 0.4),
-                                blurRadius: 20,
-                                offset: const Offset(0, 5),
+                                color: Colors.deepPurple.withValues(alpha: 0.5),
+                                blurRadius: 25,
+                                spreadRadius: 0,
+                                offset: const Offset(0, 8),
+                              ),
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.2),
+                                blurRadius: 10,
+                                spreadRadius: 0,
+                                offset: const Offset(0, 2),
                               ),
                             ],
                           ),
                           child: BackdropFilter(
-                            filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+                            child: Column(
                               children: [
                                 Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
+                                    Row(
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.all(10),
+                                          decoration: BoxDecoration(
+                                            gradient: const LinearGradient(
+                                              colors: [
+                                                Colors.amber,
+                                                Colors.orange,
+                                              ],
+                                            ),
+                                            borderRadius: BorderRadius.circular(18),
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: Colors.amber.withValues(alpha: 0.5),
+                                                blurRadius: 12,
+                                                spreadRadius: 1,
+                                              ),
+                                            ],
+                                          ),
+                                          child: const Icon(
+                                            Icons.note_alt,
+                                            color: Colors.white,
+                                            size: 28,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              'QuickNote',
+                                              style: TextStyle(
+                                                fontSize: 26,
+                                                fontWeight: FontWeight.bold,
+                                                color: Colors.white,
+                                                letterSpacing: 1,
+                                                shadows: [
+                                                  Shadow(
+                                                    color: Colors.black.withValues(alpha: 0.3),
+                                                    blurRadius: 8,
+                                                    offset: const Offset(0, 2),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                            const SizedBox(height: 2),
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                              decoration: BoxDecoration(
+                                                color: Colors.white.withValues(alpha: 0.2),
+                                                borderRadius: BorderRadius.circular(12),
+                                                border: Border.all(
+                                                  color: Colors.white.withValues(alpha: 0.3),
+                                                  width: 1,
+                                                ),
+                                              ),
+                                              child: const Text(
+                                                'v 2.1.1',
+                                                style: TextStyle(
+                                                  fontSize: 10,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: Colors.white70,
+                                                  letterSpacing: 0.5,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
                                     Container(
-                                      padding: const EdgeInsets.all(8),
                                       decoration: BoxDecoration(
                                         color: Colors.white.withValues(alpha: 0.2),
                                         borderRadius: BorderRadius.circular(15),
@@ -170,48 +245,16 @@ class _LeftMenuState extends State<LeftMenu>
                                           width: 1,
                                         ),
                                       ),
-                                      child: Icon(
-                                        Icons.note_alt,
-                                        color: Colors.white.withValues(alpha: 0.9),
-                                        size: 28,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Text(
-                                      'QuickNote',
-                                      style: TextStyle(
-                                        fontSize: 24,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.white.withValues(alpha: 0.95),
-                                        letterSpacing: 1,
-                                        shadows: [
-                                          Shadow(
-                                            color: Colors.black.withValues(alpha: 0.2),
-                                            blurRadius: 10,
-                                            offset: const Offset(0, 2),
-                                          ),
-                                        ],
+                                      child: IconButton(
+                                        icon: Icon(
+                                          Icons.close, 
+                                          color: Colors.white.withValues(alpha: 0.9), 
+                                          size: 22
+                                        ),
+                                        onPressed: widget.onClose,
                                       ),
                                     ),
                                   ],
-                                ),
-                                Container(
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withValues(alpha: 0.2),
-                                    borderRadius: BorderRadius.circular(15),
-                                    border: Border.all(
-                                      color: Colors.white.withValues(alpha: 0.3),
-                                      width: 1,
-                                    ),
-                                  ),
-                                  child: IconButton(
-                                    icon: Icon(
-                                      Icons.close, 
-                                      color: Colors.white.withValues(alpha: 0.9), 
-                                      size: 22
-                                    ),
-                                    onPressed: widget.onClose,
-                                  ),
                                 ),
                               ],
                             ),
@@ -223,135 +266,109 @@ class _LeftMenuState extends State<LeftMenu>
                           child: ListView(
                             padding: const EdgeInsets.symmetric(vertical: 16),
                             children: [
-                              // SECCIÓN: TODAS LAS NOTAS - COLOR AZUL
-                              _buildSectionTitle('Todas las notas', isDarkMode),
-                              _buildGlassButton(
-                                label: 'Todas',
-                                icon: Icons.note,
-                                color: Colors.blue,
-                                onTap: () {},
-                                isDarkMode: isDarkMode,
-                              ),
-                              _buildSubButton('Personal', onTap: () {}, isDarkMode: isDarkMode),
-                              _buildSubButton('Trabajo', onTap: () {}, isDarkMode: isDarkMode),
-
-                              const SizedBox(height: 16),
-
-                              // SECCIÓN: CALENDARIO - COLOR VERDE
+                              // SECCIÓN: CALENDARIO - COLOR VERDE CON CONTRASTE MEJORADO
                               _buildSectionTitle('Calendario', isDarkMode),
                               _buildGlassButton(
                                 label: 'Ver calendario',
                                 icon: Icons.calendar_today,
-                                color: Colors.green,
+                                color: Colors.green.shade400,
                                 onTap: _navigateToCalendar,
                                 isDarkMode: isDarkMode,
                               ),
 
                               const SizedBox(height: 16),
 
-                              // SECCIÓN: RECORDATORIO - COLOR NARANJA
+                              // SECCIÓN: RECORDATORIO - COLOR NARANJA CON CONTRASTE MEJORADO
                               _buildSectionTitle('Recordatorio', isDarkMode),
                               _buildGlassButton(
                                 label: 'Recordatorios',
                                 icon: Icons.alarm,
-                                color: Colors.orange,
+                                color: Colors.orange.shade400,
                                 onTap: () {},
                                 isDarkMode: isDarkMode,
                               ),
 
                               const SizedBox(height: 16),
 
-                              // SECCIÓN: FAVORITOS - COLOR AMARILLO
+                              // SECCIÓN: FAVORITOS - COLOR AMARILLO CON CONTRASTE MEJORADO
                               _buildSectionTitle('Favoritos', isDarkMode),
                               _buildGlassButton(
                                 label: 'Notas favoritas',
                                 icon: Icons.star,
-                                color: Colors.amber,
+                                color: Colors.amber.shade400,
                                 onTap: () {},
                                 isDarkMode: isDarkMode,
                               ),
 
                               const SizedBox(height: 16),
 
-                              // SECCIÓN: ETIQUETAS - COLOR PÚRPURA
+                              // SECCIÓN: ETIQUETAS - COLOR PÚRPURA CON CONTRASTE MEJORADO
                               _buildSectionTitle('Etiquetas', isDarkMode),
                               _buildGlassButton(
                                 label: 'Todas las etiquetas',
                                 icon: Icons.label,
-                                color: Colors.purple,
+                                color: Colors.purple.shade400,
                                 onTap: () {},
                                 isDarkMode: isDarkMode,
                               ),
 
                               const SizedBox(height: 16),
 
-                              // SECCIÓN: ARCHIVAR - COLOR TEAL
+                              // SECCIÓN: ARCHIVAR - COLOR TEAL CON CONTRASTE MEJORADO
                               _buildSectionTitle('Archivar', isDarkMode),
                               _buildGlassButton(
                                 label: 'Notas archivadas',
                                 icon: Icons.archive,
-                                color: Colors.teal,
+                                color: Colors.teal.shade400,
                                 onTap: () {},
                                 isDarkMode: isDarkMode,
                               ),
 
                               const SizedBox(height: 16),
 
-                              // SECCIÓN: PAPELERA - COLOR ROJO
+                              // SECCIÓN: PAPELERA - COLOR ROJO CON CONTRASTE MEJORADO
                               _buildSectionTitle('Papelera', isDarkMode),
                               _buildGlassButton(
                                 label: 'Papelera',
                                 icon: Icons.delete,
-                                color: Colors.red,
+                                color: Colors.red.shade400,
                                 onTap: () {},
                                 isDarkMode: isDarkMode,
                               ),
 
                               const SizedBox(height: 16),
 
-                              // SECCIÓN: WIDGET - COLOR ROSA
-                              _buildSectionTitle('Widget', isDarkMode),
-                              _buildGlassButton(
-                                label: 'Configurar widget',
-                                icon: Icons.widgets,
-                                color: Colors.pink,
-                                onTap: () {},
-                                isDarkMode: isDarkMode,
-                              ),
-
-                              const SizedBox(height: 16),
-
-                              // SECCIÓN: SINCRONIZAR - COLOR CELESTE
+                              // SECCIÓN: SINCRONIZAR - COLOR CELESTE CON CONTRASTE MEJORADO
                               _buildSectionTitle('Sincronizar y respaldar', isDarkMode),
                               _buildGlassButton(
                                 label: 'Sincronizar ahora',
                                 icon: Icons.sync,
-                                color: Colors.lightBlue,
+                                color: Colors.lightBlue.shade400,
                                 onTap: () {},
                                 isDarkMode: isDarkMode,
                               ),
 
                               const SizedBox(height: 16),
 
-                              // SECCIÓN: AYUDA - COLOR INDIGO
+                              // SECCIÓN: AYUDA - COLOR INDIGO CON CONTRASTE MEJORADO
                               _buildSectionTitle('Centro de ayuda', isDarkMode),
                               _buildGlassButton(
                                 label: 'Ayuda y soporte',
                                 icon: Icons.help,
-                                color: Colors.indigo,
+                                color: Colors.indigo.shade400,
                                 onTap: () {},
                                 isDarkMode: isDarkMode,
                               ),
 
                               const SizedBox(height: 16),
 
-                              // SECCIÓN: AJUSTES - COLOR GRIS
+                              // SECCIÓN: AJUSTES - COLOR GRIS CON CONTRASTE MEJORADO
                               _buildSectionTitle('Ajustes', isDarkMode),
                               _buildGlassButton(
                                 label: 'Configuración',
                                 icon: Icons.settings,
-                                color: Colors.grey,
-                                onTap: _navigateToSettings, // ✅ Navegar a SettingsScreen
+                                color: Colors.blueGrey.shade400,
+                                onTap: _navigateToSettings,
                                 isDarkMode: isDarkMode,
                               ),
 
@@ -371,7 +388,7 @@ class _LeftMenuState extends State<LeftMenu>
     );
   }
 
-  // Widget para título de sección
+  // Widget para título de sección mejorado
   Widget _buildSectionTitle(String title, bool isDarkMode) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
@@ -379,15 +396,21 @@ class _LeftMenuState extends State<LeftMenu>
         children: [
           Container(
             width: 4,
-            height: 18,
+            height: 20,
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  Colors.blue.shade400,
-                  Colors.purple.shade400,
-                ],
+              gradient: const LinearGradient(
+                colors: [Colors.blue, Colors.purple],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
               ),
               borderRadius: BorderRadius.circular(2),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.purple.withValues(alpha: 0.3),
+                  blurRadius: 4,
+                  spreadRadius: 0,
+                ),
+              ],
             ),
           ),
           const SizedBox(width: 8),
@@ -396,7 +419,7 @@ class _LeftMenuState extends State<LeftMenu>
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.bold,
-              color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+              color: isDarkMode ? Colors.grey[300] : Colors.grey[700],
               letterSpacing: 0.5,
             ),
           ),
@@ -405,7 +428,7 @@ class _LeftMenuState extends State<LeftMenu>
     );
   }
 
-  // Widget para botones principales con efecto glass mejorado
+  // Widget para botones principales con efecto glass mejorado y contraste
   Widget _buildGlassButton({
     required String label,
     required IconData icon,
@@ -424,29 +447,29 @@ class _LeftMenuState extends State<LeftMenu>
           end: Alignment.bottomRight,
           colors: isDarkMode
               ? [
-                  buttonColor.withValues(alpha: 0.2),
-                  Colors.grey[800]!.withValues(alpha: 0.7),
-                  Colors.grey[800]!.withValues(alpha: 0.5),
+                  buttonColor.withValues(alpha: 0.25),
+                  Colors.grey[800]!.withValues(alpha: 0.8),
+                  Colors.grey[850]!.withValues(alpha: 0.6),
                 ]
               : [
-                  buttonColor.withValues(alpha: 0.1),
-                  Colors.white.withValues(alpha: 0.8),
-                  Colors.white.withValues(alpha: 0.6),
+                  buttonColor.withValues(alpha: 0.15),
+                  Colors.white.withValues(alpha: 0.9),
+                  Colors.grey[50]!.withValues(alpha: 0.7),
                 ],
         ),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
           color: isDarkMode
-              ? buttonColor.withValues(alpha: 0.3)
-              : buttonColor.withValues(alpha: 0.2),
+              ? buttonColor.withValues(alpha: 0.4)
+              : buttonColor.withValues(alpha: 0.3),
           width: 1.5,
         ),
         boxShadow: [
           BoxShadow(
-            color: buttonColor.withValues(alpha: isDarkMode ? 0.15 : 0.2),
-            blurRadius: 12,
+            color: buttonColor.withValues(alpha: isDarkMode ? 0.2 : 0.25),
+            blurRadius: 15,
             spreadRadius: 1,
-            offset: const Offset(0, 2),
+            offset: const Offset(0, 3),
           ),
         ],
       ),
@@ -459,8 +482,8 @@ class _LeftMenuState extends State<LeftMenu>
             child: InkWell(
               onTap: onTap,
               borderRadius: BorderRadius.circular(20),
-              splashColor: buttonColor.withValues(alpha: 0.2),
-              highlightColor: buttonColor.withValues(alpha: 0.1),
+              splashColor: buttonColor.withValues(alpha: 0.3),
+              highlightColor: buttonColor.withValues(alpha: 0.15),
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                 child: Row(
@@ -470,13 +493,13 @@ class _LeftMenuState extends State<LeftMenu>
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           colors: [
-                            buttonColor.withValues(alpha: 0.3),
-                            buttonColor.withValues(alpha: 0.1),
+                            buttonColor.withValues(alpha: 0.4),
+                            buttonColor.withValues(alpha: 0.2),
                           ],
                         ),
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                          color: buttonColor.withValues(alpha: 0.3),
+                          color: buttonColor.withValues(alpha: 0.4),
                           width: 1,
                         ),
                       ),
@@ -493,14 +516,14 @@ class _LeftMenuState extends State<LeftMenu>
                         style: TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w600,
-                          color: isDarkMode ? Colors.grey[200] : Colors.black87,
+                          color: isDarkMode ? Colors.grey[200] : Colors.grey[800],
                         ),
                       ),
                     ),
                     Container(
                       padding: const EdgeInsets.all(4),
                       decoration: BoxDecoration(
-                        color: buttonColor.withValues(alpha: 0.2),
+                        color: buttonColor.withValues(alpha: 0.25),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Icon(
@@ -519,7 +542,7 @@ class _LeftMenuState extends State<LeftMenu>
     );
   }
 
-  // Widget para sub-botones (como Personal, Trabajo, etc.) con efecto glass mejorado
+  // Widget para sub-botones con efecto glass mejorado
   Widget _buildSubButton(String label, {required VoidCallback onTap, required bool isDarkMode}) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
@@ -529,19 +552,19 @@ class _LeftMenuState extends State<LeftMenu>
           end: Alignment.centerRight,
           colors: isDarkMode
               ? [
-                  Colors.grey[800]!.withValues(alpha: 0.5),
-                  Colors.grey[700]!.withValues(alpha: 0.3),
+                  Colors.grey[800]!.withValues(alpha: 0.6),
+                  Colors.grey[700]!.withValues(alpha: 0.4),
                 ]
               : [
-                  Colors.grey[100]!.withValues(alpha: 0.7),
-                  Colors.white.withValues(alpha: 0.5),
+                  Colors.grey[100]!.withValues(alpha: 0.8),
+                  Colors.white.withValues(alpha: 0.6),
                 ],
         ),
         borderRadius: BorderRadius.circular(15),
         border: Border.all(
           color: isDarkMode 
-              ? Colors.grey[600]!.withValues(alpha: 0.3)
-              : Colors.grey.shade200,
+              ? Colors.grey[600]!.withValues(alpha: 0.4)
+              : Colors.grey.shade300,
           width: 1,
         ),
       ),
