@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 
 class Constants {
   // URL de tu API en Render
-  static const String baseUrl = 'https://api-notas-personales.onrender.com';
+    static const String baseUrl = 'https://api-notas-personales.onrender.com';
+
+  // Endpoints de la API
   static const String notesEndpoint = '/api/v1/notes';
   
   // Headers para peticiones HTTP
