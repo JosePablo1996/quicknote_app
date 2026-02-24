@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:provider/provider.dart';
 import '../screens/calendar_screen.dart';
 import '../providers/theme_provider.dart';
+import '../screens/settings_screen.dart'; // ✅ Importar SettingsScreen
 
 class LeftMenu extends StatefulWidget {
   final VoidCallback onClose;
@@ -46,6 +47,16 @@ class _LeftMenuState extends State<LeftMenu>
       context,
       MaterialPageRoute(
         builder: (context) => const CalendarScreen(),
+      ),
+    );
+  }
+
+  void _navigateToSettings() {
+    widget.onClose(); // Cerrar el menú
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const SettingsScreen(),
       ),
     );
   }
@@ -340,7 +351,7 @@ class _LeftMenuState extends State<LeftMenu>
                                 label: 'Configuración',
                                 icon: Icons.settings,
                                 color: Colors.grey,
-                                onTap: () {},
+                                onTap: _navigateToSettings, // ✅ Navegar a SettingsScreen
                                 isDarkMode: isDarkMode,
                               ),
 
