@@ -30,16 +30,19 @@ class _NoteMenuState extends State<NoteMenu>
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
 
+  // Cache para evitar reconstrucciones innecesarias
+  final Map<int, Animation<double>> _itemAnimations = {};
+
   @override
   void initState() {
     super.initState();
     
     _animationController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 500),
+      duration: const Duration(milliseconds: 400), // Reducido de 500ms
     );
 
-    _scaleAnimation = Tween<double>(begin: 0.8, end: 1.0).animate(
+    _scaleAnimation = Tween<double>(begin: 0.85, end: 1.0).animate(
       CurvedAnimation(
         parent: _animationController,
         curve: Curves.easeOutBack,
@@ -54,7 +57,7 @@ class _NoteMenuState extends State<NoteMenu>
     );
 
     _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.2),
+      begin: const Offset(0, 0.15),
       end: Offset.zero,
     ).animate(
       CurvedAnimation(
@@ -70,6 +73,23 @@ class _NoteMenuState extends State<NoteMenu>
   void dispose() {
     _animationController.dispose();
     super.dispose();
+  }
+
+  // Obtener animación de item con cache
+  Animation<double> _getItemAnimation(int index) {
+    if (!_itemAnimations.containsKey(index)) {
+      _itemAnimations[index] = Tween<double>(begin: 0.0, end: 1.0).animate(
+        CurvedAnimation(
+          parent: _animationController,
+          curve: Interval(
+            0.1 + (index * 0.05),
+            0.4 + (index * 0.05),
+            curve: Curves.easeOut,
+          ),
+        ),
+      );
+    }
+    return _itemAnimations[index]!;
   }
 
   void _handleTap(VoidCallback action) {
@@ -105,31 +125,31 @@ class _NoteMenuState extends State<NoteMenu>
           );
         },
         child: Container(
-          width: 300,
+          width: 320, // Un poco más ancho
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(30),
+            borderRadius: BorderRadius.circular(35),
             boxShadow: [
               BoxShadow(
                 color: isDarkMode
-                    ? Colors.blue.withValues(alpha: 0.2)
-                    : Colors.blue.withValues(alpha: 0.3),
-                blurRadius: 40,
+                    ? Colors.blue.withValues(alpha: 0.15)
+                    : Colors.blue.withValues(alpha: 0.2),
+                blurRadius: 30,
                 spreadRadius: 0,
                 offset: const Offset(0, 10),
               ),
               BoxShadow(
                 color: isDarkMode
-                    ? Colors.black.withValues(alpha: 0.4)
-                    : Colors.black.withValues(alpha: 0.2),
-                blurRadius: 30,
+                    ? Colors.black.withValues(alpha: 0.3)
+                    : Colors.black.withValues(alpha: 0.1),
+                blurRadius: 20,
                 spreadRadius: 0,
               ),
             ],
           ),
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(30),
+            borderRadius: BorderRadius.circular(35),
             child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+              filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15), // Reducido de 20
               child: Container(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
@@ -137,61 +157,57 @@ class _NoteMenuState extends State<NoteMenu>
                     end: Alignment.bottomRight,
                     colors: isDarkMode
                         ? [
-                            Colors.grey[900]!.withValues(alpha: 0.7),
-                            Colors.grey[800]!.withValues(alpha: 0.6),
-                            Colors.grey[900]!.withValues(alpha: 0.7),
+                            Colors.grey[900]!.withValues(alpha: 0.6),
+                            Colors.grey[800]!.withValues(alpha: 0.5),
+                            Colors.grey[900]!.withValues(alpha: 0.6),
                           ]
                         : [
-                            Colors.white.withValues(alpha: 0.7),
-                            Colors.blue.shade50.withValues(alpha: 0.6),
-                            Colors.white.withValues(alpha: 0.7),
+                            Colors.white.withValues(alpha: 0.6),
+                            Colors.blue.shade50.withValues(alpha: 0.5),
+                            Colors.white.withValues(alpha: 0.6),
                           ],
                     stops: const [0.0, 0.5, 1.0],
                   ),
                   border: Border.all(
                     color: isDarkMode
-                        ? Colors.grey[600]!.withValues(alpha: 0.4)
-                        : Colors.white.withValues(alpha: 0.4),
+                        ? Colors.grey[600]!.withValues(alpha: 0.3)
+                        : Colors.white.withValues(alpha: 0.3),
                     width: 1.5,
                   ),
                 ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Header
+                    // Header mejorado
                     Container(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 20,
-                        vertical: 18,
+                        horizontal: 24,
+                        vertical: 20,
                       ),
                       decoration: BoxDecoration(
-                        gradient: isDarkMode
-                            ? LinearGradient(
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                                colors: [
-                                  Colors.grey[800]!.withValues(alpha: 0.9),
-                                  Colors.grey[850]!.withValues(alpha: 0.9),
-                                  Colors.grey[900]!.withValues(alpha: 0.9),
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: isDarkMode
+                              ? [
+                                  Colors.blue.shade900.withValues(alpha: 0.8),
+                                  Colors.purple.shade900.withValues(alpha: 0.7),
+                                  Colors.grey[900]!.withValues(alpha: 0.6),
+                                ]
+                              : [
+                                  Colors.blue.shade700.withValues(alpha: 0.8),
+                                  Colors.purple.shade700.withValues(alpha: 0.7),
+                                  Colors.blue.shade900.withValues(alpha: 0.6),
                                 ],
-                              )
-                            : LinearGradient(
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                                colors: [
-                                  Colors.blue.shade400.withValues(alpha: 0.9),
-                                  Colors.blue.shade600.withValues(alpha: 0.9),
-                                  Colors.blue.shade800.withValues(alpha: 0.9),
-                                ],
-                              ),
+                        ),
                         borderRadius: const BorderRadius.vertical(
-                          top: Radius.circular(30),
+                          top: Radius.circular(35),
                         ),
                         border: Border(
                           bottom: BorderSide(
                             color: isDarkMode
-                                ? Colors.grey[400]!.withValues(alpha: 0.3)
-                                : Colors.white.withValues(alpha: 0.3),
+                                ? Colors.grey[400]!.withValues(alpha: 0.2)
+                                : Colors.white.withValues(alpha: 0.2),
                             width: 1,
                           ),
                         ),
@@ -199,27 +215,41 @@ class _NoteMenuState extends State<NoteMenu>
                       child: Row(
                         children: [
                           Container(
-                            padding: const EdgeInsets.all(8),
+                            padding: const EdgeInsets.all(10),
                             decoration: BoxDecoration(
-                              color: isDarkMode
-                                  ? Colors.grey[600]!.withValues(alpha: 0.2)
-                                  : Colors.white.withValues(alpha: 0.2),
-                              borderRadius: BorderRadius.circular(12),
+                              gradient: LinearGradient(
+                                colors: [
+                                  Colors.white.withValues(alpha: 0.2),
+                                  Colors.white.withValues(alpha: 0.1),
+                                ],
+                              ),
+                              borderRadius: BorderRadius.circular(15),
+                              border: Border.all(
+                                color: Colors.white.withValues(alpha: 0.2),
+                                width: 1,
+                              ),
                             ),
                             child: Icon(
                               Icons.menu,
-                              color: isDarkMode ? Colors.blue.shade200 : Colors.white,
-                              size: 20,
+                              color: Colors.white,
+                              size: 22,
                             ),
                           ),
-                          const SizedBox(width: 12),
+                          const SizedBox(width: 14),
                           Text(
-                            'Opciones',
+                            'Opciones de notas',
                             style: TextStyle(
-                              fontSize: 18,
+                              fontSize: 20,
                               fontWeight: FontWeight.bold,
-                              color: isDarkMode ? Colors.blue.shade200 : Colors.white,
+                              color: Colors.white,
                               letterSpacing: 0.5,
+                              shadows: [
+                                Shadow(
+                                  color: Colors.black.withValues(alpha: 0.2),
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
                             ),
                           ),
                         ],
@@ -229,40 +259,43 @@ class _NoteMenuState extends State<NoteMenu>
                     // Lista de opciones
                     Padding(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 8,
+                        horizontal: 16,
+                        vertical: 12,
                       ),
                       child: Column(
                         children: [
-                          _buildAnimatedMenuItem(
+                          _buildMenuItem(
                             icon: Icons.view_list,
                             label: 'Vista de lista',
                             index: 0,
-                            color: Colors.blue,
+                            color: Colors.blue.shade400,
                             onTap: () => _handleTap(widget.onViewList),
                             isDarkMode: isDarkMode,
                           ),
-                          _buildAnimatedMenuItem(
+                          const SizedBox(height: 8),
+                          _buildMenuItem(
                             icon: Icons.check_box,
                             label: 'Seleccionar',
                             index: 1,
-                            color: Colors.green,
+                            color: Colors.green.shade400,
                             onTap: () => _handleTap(widget.onSelect),
                             isDarkMode: isDarkMode,
                           ),
-                          _buildAnimatedMenuItem(
+                          const SizedBox(height: 8),
+                          _buildMenuItem(
                             icon: Icons.sort,
                             label: 'Ordenar',
                             index: 2,
-                            color: Colors.orange,
+                            color: Colors.orange.shade400,
                             onTap: () => _handleTap(widget.onSort),
                             isDarkMode: isDarkMode,
                           ),
-                          _buildAnimatedMenuItem(
+                          const SizedBox(height: 8),
+                          _buildMenuItem(
                             icon: Icons.sync,
                             label: 'Sincronizar',
                             index: 3,
-                            color: Colors.purple,
+                            color: Colors.purple.shade400,
                             onTap: () => _handleTap(widget.onSync),
                             isDarkMode: isDarkMode,
                           ),
@@ -279,7 +312,7 @@ class _NoteMenuState extends State<NoteMenu>
     );
   }
 
-  Widget _buildAnimatedMenuItem({
+  Widget _buildMenuItem({
     required IconData icon,
     required String label,
     required int index,
@@ -287,60 +320,49 @@ class _NoteMenuState extends State<NoteMenu>
     required VoidCallback onTap,
     required bool isDarkMode,
   }) {
-    final itemAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _animationController,
-        curve: Interval(
-          0.1 + (index * 0.05),
-          0.4 + (index * 0.05),
-          curve: Curves.easeOut,
-        ),
-      ),
-    );
-
     return AnimatedBuilder(
       animation: _animationController,
       builder: (context, child) {
+        final itemAnimation = _getItemAnimation(index).value;
+        
         return Opacity(
-          opacity: itemAnimation.value,
+          opacity: itemAnimation,
           child: Transform.translate(
-            offset: Offset(30 * (1 - itemAnimation.value), 0),
+            offset: Offset(20 * (1 - itemAnimation), 0),
             child: child,
           ),
         );
       },
       child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 6),
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: isDarkMode
                 ? [
-                    Colors.grey[800]!.withValues(alpha: 0.8),
-                    Colors.grey[800]!.withValues(alpha: 0.9),
-                    color.withValues(alpha: 0.15),
+                    Colors.grey[800]!.withValues(alpha: 0.6),
+                    Colors.grey[850]!.withValues(alpha: 0.5),
+                    color.withValues(alpha: 0.1),
                   ]
                 : [
-                    Colors.white.withValues(alpha: 0.8),
-                    Colors.white.withValues(alpha: 0.9),
-                    color.withValues(alpha: 0.15),
+                    Colors.white.withValues(alpha: 0.6),
+                    Colors.grey[50]!.withValues(alpha: 0.5),
+                    color.withValues(alpha: 0.1),
                   ],
           ),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: isDarkMode
-                ? Colors.grey[600]!.withValues(alpha: 0.8)
-                : Colors.white.withValues(alpha: 0.8),
+                ? color.withValues(alpha: 0.2)
+                : color.withValues(alpha: 0.15),
             width: 1,
           ),
           boxShadow: [
             BoxShadow(
-              color: isDarkMode
-                  ? color.withValues(alpha: 0.15)
-                  : color.withValues(alpha: 0.2),
-              blurRadius: 10,
+              color: color.withValues(alpha: isDarkMode ? 0.1 : 0.15),
+              blurRadius: 8,
               spreadRadius: 0,
+              offset: const Offset(0, 3),
             ),
           ],
         ),
@@ -349,25 +371,25 @@ class _NoteMenuState extends State<NoteMenu>
           child: InkWell(
             onTap: onTap,
             borderRadius: BorderRadius.circular(20),
-            splashColor: color.withValues(alpha: 0.2),
-            highlightColor: color.withValues(alpha: 0.1),
+            splashColor: color.withValues(alpha: 0.15),
+            highlightColor: color.withValues(alpha: 0.08),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               child: Row(
                 children: [
-                  // Icono con efecto vidrio
+                  // Icono con efecto vidrio mejorado
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         colors: [
-                          color.withValues(alpha: 0.2),
-                          color.withValues(alpha: 0.1),
+                          color.withValues(alpha: 0.15),
+                          color.withValues(alpha: 0.05),
                         ],
                       ),
-                      borderRadius: BorderRadius.circular(15),
+                      borderRadius: BorderRadius.circular(14),
                       border: Border.all(
-                        color: color.withValues(alpha: 0.3),
+                        color: color.withValues(alpha: 0.2),
                         width: 1,
                       ),
                     ),
@@ -387,88 +409,35 @@ class _NoteMenuState extends State<NoteMenu>
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
-                        color: isDarkMode ? Colors.grey[300] : Colors.grey[800],
+                        color: isDarkMode ? Colors.grey[200] : Colors.grey[800],
                         letterSpacing: 0.3,
                       ),
                     ),
                   ),
                   
-                  // Toggle vidrioso
+                  // Indicador visual mejorado
                   Container(
-                    width: 44,
-                    height: 24,
+                    width: 36,
+                    height: 36,
                     decoration: BoxDecoration(
-                      gradient: LinearGradient(
+                      gradient: RadialGradient(
                         colors: [
-                          color.withValues(alpha: isDarkMode ? 0.3 : 0.4),
-                          color.withValues(alpha: isDarkMode ? 0.15 : 0.2),
+                          color.withValues(alpha: 0.2),
+                          color.withValues(alpha: 0.05),
                         ],
                       ),
-                      borderRadius: BorderRadius.circular(30),
+                      shape: BoxShape.circle,
                       border: Border.all(
-                        color: color.withValues(alpha: isDarkMode ? 0.4 : 0.5),
-                        width: 1.5,
+                        color: color.withValues(alpha: 0.2),
+                        width: 1,
                       ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: color.withValues(alpha: isDarkMode ? 0.2 : 0.3),
-                          blurRadius: 4,
-                          spreadRadius: 0,
-                        ),
-                      ],
                     ),
-                    child: Stack(
-                      children: [
-                        Positioned(
-                          left: 4,
-                          top: 4,
-                          child: Container(
-                            width: 4,
-                            height: 4,
-                            decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.3),
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                        ),
-                        Positioned(
-                          right: 4,
-                          bottom: 4,
-                          child: Container(
-                            width: 4,
-                            height: 4,
-                            decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.3),
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                        ),
-                        Center(
-                          child: Container(
-                            width: 18,
-                            height: 18,
-                            decoration: BoxDecoration(
-                              gradient: RadialGradient(
-                                colors: [
-                                  color,
-                                  color.withValues(alpha: 0.8),
-                                ],
-                              ),
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: Colors.white.withValues(alpha: 0.5),
-                                width: 1,
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: color.withValues(alpha: 0.5),
-                                  blurRadius: 4,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
+                    child: Center(
+                      child: Icon(
+                        Icons.arrow_forward_ios,
+                        size: 14,
+                        color: color.withValues(alpha: 0.8),
+                      ),
                     ),
                   ),
                 ],

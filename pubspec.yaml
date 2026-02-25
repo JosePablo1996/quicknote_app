@@ -26,6 +26,11 @@ dependencies:
   # 🔄 DEPENDENCIA PARA REINTENTOS AUTOMÁTICOS
   retry: ^3.1.0  # Para reintentar peticiones HTTP fallidas
 
+  # 🗄️ SUPABASE PARA ALMACENAMIENTO DE IMÁGENES Y DATOS
+  supabase_flutter: ^2.0.0  # Cliente oficial de Supabase para Flutter
+  image_picker: ^1.0.4  # Para seleccionar imágenes de la galería/cámara
+  url_launcher: ^6.2.1  # Para abrir enlaces externos (GitHub)
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
