@@ -19,7 +19,8 @@ class NoteListScreen extends StatefulWidget {
   State<NoteListScreen> createState() => _NoteListScreenState();
 }
 
-class _NoteListScreenState extends State<NoteListScreen> {
+class _NoteListScreenState extends State<NoteListScreen>
+    with SingleTickerProviderStateMixin {
   final ApiService _apiService = ApiService();
   late Future<List<Note>> _futureNotes;
   final TextEditingController _searchController = TextEditingController();
@@ -41,15 +42,41 @@ class _NoteListScreenState extends State<NoteListScreen> {
   bool _isSelectionMode = false;
   Set<int> _selectedNoteIds = {};
 
+  // Controlador de animación para el FAB
+  late AnimationController _fabAnimationController;
+  late Animation<double> _fabScaleAnimation;
+  late Animation<double> _fabRotationAnimation;
+
   @override
   void initState() {
     super.initState();
     _loadNotes();
+    
+    // Configurar animaciones para el FAB
+    _fabAnimationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    )..repeat(reverse: true);
+    
+    _fabScaleAnimation = Tween<double>(begin: 1.0, end: 1.1).animate(
+      CurvedAnimation(
+        parent: _fabAnimationController,
+        curve: Curves.easeInOut,
+      ),
+    );
+    
+    _fabRotationAnimation = Tween<double>(begin: 0.0, end: 0.05).animate(
+      CurvedAnimation(
+        parent: _fabAnimationController,
+        curve: Curves.easeInOut,
+      ),
+    );
   }
 
   @override
   void dispose() {
     _searchController.dispose();
+    _fabAnimationController.dispose();
     super.dispose();
   }
 
@@ -68,7 +95,7 @@ class _NoteListScreenState extends State<NoteListScreen> {
         sortedNotes.sort((a, b) {
           final aDate = a.updatedAt ?? a.createdAt;
           final bDate = b.updatedAt ?? b.createdAt;
-          return bDate.compareTo(aDate); // Más reciente primero
+          return bDate.compareTo(aDate);
         });
         break;
       case 'Fecha de creación':
@@ -85,7 +112,6 @@ class _NoteListScreenState extends State<NoteListScreen> {
     return sortedNotes;
   }
 
-  // Función para salir del modo selección
   void _exitSelectionMode() {
     setState(() {
       _isSelectionMode = false;
@@ -93,7 +119,6 @@ class _NoteListScreenState extends State<NoteListScreen> {
     });
   }
 
-  // Función para seleccionar/deseleccionar nota
   void _toggleNoteSelection(int noteId) {
     setState(() {
       if (_selectedNoteIds.contains(noteId)) {
@@ -110,7 +135,6 @@ class _NoteListScreenState extends State<NoteListScreen> {
     });
   }
 
-  // Función para eliminar notas seleccionadas
   Future<void> _deleteSelectedNotes() async {
     if (_selectedNoteIds.isEmpty) return;
     
@@ -140,8 +164,6 @@ class _NoteListScreenState extends State<NoteListScreen> {
     );
 
     if (confirm == true) {
-      // Aquí iría la lógica para eliminar múltiples notas
-      // Por ahora mostramos un mensaje
       SnackbarUtils.showSuccessSnackbar(
         context,
         'Función de eliminar múltiples próximamente',
@@ -446,7 +468,6 @@ class _NoteListScreenState extends State<NoteListScreen> {
     if (result == true) _loadNotes();
   }
 
-  // ✅ FUNCIONES ACTUALIZADAS DEL MENÚ (SIN NAVIGATOR.POP)
   void _onViewList() {
     setState(() {
       _isGridView = !_isGridView;
@@ -479,7 +500,6 @@ class _NoteListScreenState extends State<NoteListScreen> {
     _loadNotes();
   }
 
-  // ✅ NUEVO: Diálogo de ordenamiento
   void _showSortDialog() {
     showDialog(
       context: context,
@@ -561,7 +581,6 @@ class _NoteListScreenState extends State<NoteListScreen> {
     return colors[note.id % colors.length];
   }
 
-  // Widgets para tarjetas en grid y lista
   Widget _buildGridCard(Note note, String initials, Color noteColor, bool isDarkMode) {
     return GestureDetector(
       onTap: _isSelectionMode
@@ -824,6 +843,57 @@ class _NoteListScreenState extends State<NoteListScreen> {
     );
   }
 
+  // Widget para el FAB animado en la esquina inferior derecha
+  Widget _buildAnimatedFAB() {
+    return AnimatedBuilder(
+      animation: _fabAnimationController,
+      builder: (context, child) {
+        return Transform.scale(
+          scale: _fabScaleAnimation.value,
+          child: Transform.rotate(
+            angle: _fabRotationAnimation.value,
+            child: child,
+          ),
+        );
+      },
+      child: FloatingActionButton(
+        onPressed: _isSelectionMode
+            ? null
+            : () async {
+                // Animación al presionar
+                await _fabAnimationController.animateTo(0.0,
+                    duration: const Duration(milliseconds: 200));
+                
+                final result = await Navigator.push(
+                  context,
+                  PageRouteBuilder(
+                    pageBuilder: (_, __, ___) => const NoteFormScreen(),
+                    transitionsBuilder: (_, animation, __, child) {
+                      return ScaleTransition(
+                        scale: animation,
+                        child: child,
+                      );
+                    },
+                  ),
+                );
+                
+                // Reiniciar animación después de volver
+                _fabAnimationController.repeat(reverse: true);
+                
+                if (result == true) _loadNotes();
+              },
+        backgroundColor: _isSelectionMode ? Colors.grey : Colors.blue,
+        foregroundColor: Colors.white,
+        elevation: 8,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: const Icon(Icons.add),
+        tooltip: 'Agregar nota',
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
@@ -832,6 +902,8 @@ class _NoteListScreenState extends State<NoteListScreen> {
       key: _scaffoldKey,
       backgroundColor: themeProvider.isDarkMode ? Colors.grey[900] : Colors.grey[50],
       drawer: LeftMenu(onClose: _closeLeftMenu),
+      floatingActionButton: _buildAnimatedFAB(),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat, // ✅ Esquina inferior derecha
       body: SafeArea(
         child: Column(
           children: [
@@ -861,14 +933,13 @@ class _NoteListScreenState extends State<NoteListScreen> {
                       onSelect: _onSelect,
                       onSort: _onSort,
                       onSync: _onSync,
-                      onImport: () {}, // Opción eliminada, pero mantenemos por compatibilidad
+                      onImport: () {},
                     ),
                   ),
                 );
               },
             ),
             
-            // Barra de selección (visible solo en modo selección)
             if (_isSelectionMode)
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -922,6 +993,17 @@ class _NoteListScreenState extends State<NoteListScreen> {
                     }
 
                     if (snapshot.hasError) {
+                      // Manejo mejorado de errores con mensajes específicos
+                      String errorMessage = 'Error de conexión';
+                      
+                      if (snapshot.error.toString().contains('Timeout')) {
+                        errorMessage = 'El servidor está tardando en responder.\n'
+                            'Desliza hacia abajo para refrescar.';
+                      } else if (snapshot.error.toString().contains('SocketException')) {
+                        errorMessage = 'No hay conexión a internet.\n'
+                            'Verifica tu conexión y vuelve a intentar.';
+                      }
+
                       return Center(
                         child: Padding(
                           padding: const EdgeInsets.all(24),
@@ -935,18 +1017,18 @@ class _NoteListScreenState extends State<NoteListScreen> {
                                   shape: BoxShape.circle,
                                 ),
                                 child: Icon(
-                                  Icons.error_outline,
+                                  Icons.wifi_off,
                                   size: 60,
                                   color: Colors.red.shade400,
                                 ),
                               ),
                               const SizedBox(height: 20),
                               Text(
-                                '¡Ups! Algo salió mal',
+                                errorMessage,
+                                textAlign: TextAlign.center,
                                 style: TextStyle(
-                                  fontSize: 22,
-                                  fontWeight: FontWeight.bold,
-                                  color: themeProvider.isDarkMode ? Colors.white : Colors.grey[800],
+                                  fontSize: 16,
+                                  color: themeProvider.isDarkMode ? Colors.white70 : Colors.grey[600],
                                 ),
                               ),
                               const SizedBox(height: 30),
@@ -988,14 +1070,12 @@ class _NoteListScreenState extends State<NoteListScreen> {
                       );
                     }
 
-                    // Filtrar y ordenar notas
                     final filteredNotes = _selectedCategory == 'Todas'
                         ? notes
                         : notes.where((note) => note.id % 2 == 0).toList();
                     
                     final sortedNotes = _sortNotes(filteredNotes);
 
-                    // Vista según modo (grid o lista)
                     if (_isGridView) {
                       return GridView.builder(
                         padding: const EdgeInsets.all(16),
@@ -1044,34 +1124,6 @@ class _NoteListScreenState extends State<NoteListScreen> {
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _isSelectionMode
-            ? null
-            : () async {
-                final result = await Navigator.push(
-                  context,
-                  PageRouteBuilder(
-                    pageBuilder: (_, __, ___) => const NoteFormScreen(),
-                    transitionsBuilder: (_, animation, __, child) {
-                      return ScaleTransition(
-                        scale: animation,
-                        child: child,
-                      );
-                    },
-                  ),
-                );
-                if (result == true) _loadNotes();
-              },
-        backgroundColor: _isSelectionMode ? Colors.grey : Colors.blue,
-        foregroundColor: Colors.white,
-        elevation: 8,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: const Icon(Icons.add),
-        tooltip: 'Agregar nota',
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
     );
   }
 }

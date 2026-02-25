@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'dart:ui';
 import 'package:provider/provider.dart';
 import '../screens/calendar_screen.dart';
+import '../screens/settings_screen.dart';
 import '../providers/theme_provider.dart';
-import '../screens/settings_screen.dart'; // ✅ Importar SettingsScreen
+import '../utils/snackbar_utils.dart'; // ✅ Importar SnackbarUtils
 
 class LeftMenu extends StatefulWidget {
   final VoidCallback onClose;
@@ -41,23 +42,23 @@ class _LeftMenuState extends State<LeftMenu>
     super.dispose();
   }
 
-  void _navigateToCalendar() {
+  // ✅ Función genérica para navegar a cualquier pantalla
+  void _navigateToScreen(Widget screen) {
     widget.onClose(); // Cerrar el menú
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => const CalendarScreen(),
+        builder: (context) => screen,
       ),
     );
   }
 
-  void _navigateToSettings() {
+  // ✅ Función para mostrar mensaje de funcionalidad próximamente
+  void _showComingSoon(String feature) {
     widget.onClose(); // Cerrar el menú
-    Navigator.push(
+    SnackbarUtils.showInfoSnackbar(
       context,
-      MaterialPageRoute(
-        builder: (context) => const SettingsScreen(),
-      ),
+      '🔜 $feature - Próximamente',
     );
   }
 
@@ -261,114 +262,102 @@ class _LeftMenuState extends State<LeftMenu>
                           ),
                         ),
 
-                        // CONTENIDO DEL MENÚ
+                        // CONTENIDO DEL MENÚ CON TODOS LOS onTap IMPLEMENTADOS
                         Expanded(
                           child: ListView(
                             padding: const EdgeInsets.symmetric(vertical: 16),
                             children: [
-                              // SECCIÓN: CALENDARIO - COLOR VERDE CON CONTRASTE MEJORADO
+                              // SECCIÓN: CALENDARIO
                               _buildSectionTitle('Calendario', isDarkMode),
                               _buildGlassButton(
                                 label: 'Ver calendario',
                                 icon: Icons.calendar_today,
                                 color: Colors.green.shade400,
-                                onTap: _navigateToCalendar,
+                                onTap: () => _navigateToScreen(const CalendarScreen()),
                                 isDarkMode: isDarkMode,
                               ),
 
                               const SizedBox(height: 16),
 
-                              // SECCIÓN: RECORDATORIO - COLOR NARANJA CON CONTRASTE MEJORADO
-                              _buildSectionTitle('Recordatorio', isDarkMode),
-                              _buildGlassButton(
-                                label: 'Recordatorios',
-                                icon: Icons.alarm,
-                                color: Colors.orange.shade400,
-                                onTap: () {},
-                                isDarkMode: isDarkMode,
-                              ),
-
-                              const SizedBox(height: 16),
-
-                              // SECCIÓN: FAVORITOS - COLOR AMARILLO CON CONTRASTE MEJORADO
+                              // SECCIÓN: FAVORITOS
                               _buildSectionTitle('Favoritos', isDarkMode),
                               _buildGlassButton(
                                 label: 'Notas favoritas',
                                 icon: Icons.star,
                                 color: Colors.amber.shade400,
-                                onTap: () {},
+                                onTap: () => _showComingSoon('Favoritos'),
                                 isDarkMode: isDarkMode,
                               ),
 
                               const SizedBox(height: 16),
 
-                              // SECCIÓN: ETIQUETAS - COLOR PÚRPURA CON CONTRASTE MEJORADO
+                              // SECCIÓN: ETIQUETAS
                               _buildSectionTitle('Etiquetas', isDarkMode),
                               _buildGlassButton(
                                 label: 'Todas las etiquetas',
                                 icon: Icons.label,
                                 color: Colors.purple.shade400,
-                                onTap: () {},
+                                onTap: () => _showComingSoon('Etiquetas'),
                                 isDarkMode: isDarkMode,
                               ),
 
                               const SizedBox(height: 16),
 
-                              // SECCIÓN: ARCHIVAR - COLOR TEAL CON CONTRASTE MEJORADO
+                              // SECCIÓN: ARCHIVAR
                               _buildSectionTitle('Archivar', isDarkMode),
                               _buildGlassButton(
                                 label: 'Notas archivadas',
                                 icon: Icons.archive,
                                 color: Colors.teal.shade400,
-                                onTap: () {},
+                                onTap: () => _showComingSoon('Archivadas'),
                                 isDarkMode: isDarkMode,
                               ),
 
                               const SizedBox(height: 16),
 
-                              // SECCIÓN: PAPELERA - COLOR ROJO CON CONTRASTE MEJORADO
+                              // SECCIÓN: PAPELERA
                               _buildSectionTitle('Papelera', isDarkMode),
                               _buildGlassButton(
                                 label: 'Papelera',
                                 icon: Icons.delete,
                                 color: Colors.red.shade400,
-                                onTap: () {},
+                                onTap: () => _showComingSoon('Papelera'),
                                 isDarkMode: isDarkMode,
                               ),
 
                               const SizedBox(height: 16),
 
-                              // SECCIÓN: SINCRONIZAR - COLOR CELESTE CON CONTRASTE MEJORADO
+                              // SECCIÓN: SINCRONIZAR
                               _buildSectionTitle('Sincronizar y respaldar', isDarkMode),
                               _buildGlassButton(
                                 label: 'Sincronizar ahora',
                                 icon: Icons.sync,
                                 color: Colors.lightBlue.shade400,
-                                onTap: () {},
+                                onTap: () => _showComingSoon('Sincronización'),
                                 isDarkMode: isDarkMode,
                               ),
 
                               const SizedBox(height: 16),
 
-                              // SECCIÓN: AYUDA - COLOR INDIGO CON CONTRASTE MEJORADO
+                              // SECCIÓN: AYUDA
                               _buildSectionTitle('Centro de ayuda', isDarkMode),
                               _buildGlassButton(
                                 label: 'Ayuda y soporte',
                                 icon: Icons.help,
                                 color: Colors.indigo.shade400,
-                                onTap: () {},
+                                onTap: () => _showComingSoon('Centro de ayuda'),
                                 isDarkMode: isDarkMode,
                               ),
 
                               const SizedBox(height: 16),
 
-                              // SECCIÓN: AJUSTES - COLOR GRIS CON CONTRASTE MEJORADO
+                              // SECCIÓN: AJUSTES
                               _buildSectionTitle('Ajustes', isDarkMode),
                               _buildGlassButton(
                                 label: 'Configuración',
                                 icon: Icons.settings,
                                 color: Colors.blueGrey.shade400,
-                                onTap: _navigateToSettings,
+                                onTap: () => _navigateToScreen(const SettingsScreen()),
                                 isDarkMode: isDarkMode,
                               ),
 
@@ -530,66 +519,6 @@ class _LeftMenuState extends State<LeftMenu>
                         Icons.arrow_forward_ios,
                         size: 14,
                         color: buttonColor,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  // Widget para sub-botones con efecto glass mejorado
-  Widget _buildSubButton(String label, {required VoidCallback onTap, required bool isDarkMode}) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.centerLeft,
-          end: Alignment.centerRight,
-          colors: isDarkMode
-              ? [
-                  Colors.grey[800]!.withValues(alpha: 0.6),
-                  Colors.grey[700]!.withValues(alpha: 0.4),
-                ]
-              : [
-                  Colors.grey[100]!.withValues(alpha: 0.8),
-                  Colors.white.withValues(alpha: 0.6),
-                ],
-        ),
-        borderRadius: BorderRadius.circular(15),
-        border: Border.all(
-          color: isDarkMode 
-              ? Colors.grey[600]!.withValues(alpha: 0.4)
-              : Colors.grey.shade300,
-          width: 1,
-        ),
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(15),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 4, sigmaY: 4),
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
-              onTap: onTap,
-              borderRadius: BorderRadius.circular(15),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                child: Row(
-                  children: [
-                    const SizedBox(width: 42), // Alineación con los iconos
-                    Expanded(
-                      child: Text(
-                        label,
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                          color: isDarkMode ? Colors.grey[300] : Colors.grey[700],
-                        ),
                       ),
                     ),
                   ],

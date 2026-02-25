@@ -5,7 +5,7 @@ publish_to: 'none'
 version: 2.1.0+1
 
 environment:
-  sdk: ^3.5.0
+  sdk: ^3.11.0
 
 dependencies:
   flutter:
@@ -21,18 +21,10 @@ dependencies:
   flutter_secure_storage: ^9.2.2
   shared_preferences: ^2.2.3
   pin_code_fields: ^8.0.1
-  
-  # ✅ VERSIÓN CORREGIDA de pattern_lock
-  pattern_lock: ^2.0.0  # Cambiado de ^1.0.0 a ^2.0.0
+  pattern_lock: ^2.0.0
 
-  # 📦 DEPENDENCIAS PARA FUNCIONALIDADES FUTURAS (comentadas)
-  # record: ^5.0.0
-  # audioplayers: ^6.0.0
-  # path_provider: ^2.1.3
-  # permission_handler: ^11.3.1
-  # camera: ^0.11.0
-  # image_picker: ^1.1.2
-  # sqflite: ^2.3.3
+  # 🔄 DEPENDENCIA PARA REINTENTOS AUTOMÁTICOS
+  retry: ^3.1.0  # Para reintentar peticiones HTTP fallidas
 
 dev_dependencies:
   flutter_test:
