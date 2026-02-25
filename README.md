@@ -72,26 +72,6 @@ quicknote_app/
 - **API en producción**: [https://api-notas-personales.onrender.com](https://api-notas-personales.onrender.com)
 - **Documentación API**: [https://api-notas-personales.onrender.com/docs](https://api-notas-personales.onrender.com/docs)
 
-## 📊 Estado del Proyecto
-
-✅ **Semana 1 completada** - UI/UX y funcionalidades básicas
-- [x] Header personalizado con menús
-- [x] Menú lateral izquierdo con Liquid Glass
-- [x] Menú lateral derecho con animaciones
-- [x] Calendario integrado (vistas mensual/semanal)
-- [x] Selector de colores para notas
-- [x] CRUD completo de notas
-- [x] Snackbars personalizados
-- [x] Empty State animado
-
-🚧 **Semana 2 (Próximamente)**
-- [ ] Tema claro/oscuro persistente
-- [ ] Búsqueda en tiempo real
-- [ ] Categorías y etiquetas avanzadas
-- [ ] Compartir notas
-- [ ] Notas de voz
-- [ ] Widgets para pantalla de inicio
-
 
 ## 🛠️ Instalación y Configuración
 
