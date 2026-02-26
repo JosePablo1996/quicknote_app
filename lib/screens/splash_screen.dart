@@ -325,7 +325,7 @@ class _SplashScreenState extends State<SplashScreen>
                             ),
                             const SizedBox(width: 8),
                             Text(
-                              'v2.1.1',
+                              'v2.1.2',
                               style: TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w600,
@@ -362,7 +362,7 @@ class _SplashScreenState extends State<SplashScreen>
                                 borderRadius: BorderRadius.circular(20),
                               ),
                               child: const Text(
-                                'Jose Pablo Miranda',
+                                'Jose Pablo Miranda Quintanilla',
                                 style: TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.bold,

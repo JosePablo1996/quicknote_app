@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:provider/provider.dart';
 import '../models/note.dart';
 import '../services/api_service.dart';
+import '../providers/note_provider.dart'; // 👈 IMPORTAMOS NOTE PROVIDER
 import '../widgets/empty_notes_widget.dart';
 import '../widgets/custom_header.dart';
 import '../widgets/note_menu.dart';
@@ -71,6 +72,43 @@ class _NoteListScreenState extends State<NoteListScreen>
         curve: Curves.easeInOut,
       ),
     );
+
+    // 👇 CÓDIGO TEMPORAL PARA DEBUG: Cargar notas en el provider al iniciar
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _debugLoadNotesInProvider();
+    });
+  }
+
+  // 👇 MÉTODO TEMPORAL PARA DEBUG
+  Future<void> _debugLoadNotesInProvider() async {
+    debugPrint('🔍 ===== DEBUG NOTE PROVIDER =====');
+    try {
+      final noteProvider = Provider.of<NoteProvider>(context, listen: false);
+      await noteProvider.loadNotes();
+      
+      final notes = noteProvider.notes;
+      debugPrint('📋 Notas en provider después de loadNotes: ${notes.length}');
+      
+      if (notes.isEmpty) {
+        debugPrint('⚠️ No hay notas en el provider. Verificando API directamente...');
+        try {
+          final apiNotes = await _apiService.getNotes();
+          debugPrint('📡 API devolvió: ${apiNotes.length} notas');
+          for (var note in apiNotes) {
+            debugPrint('   - ID: ${note.id}, Título: ${note.title}');
+          }
+        } catch (e) {
+          debugPrint('❌ Error al obtener notas de API: $e');
+        }
+      } else {
+        for (var note in notes) {
+          debugPrint('   - ID: ${note.id}, Título: ${note.title}');
+        }
+      }
+      debugPrint('🔍 ===== FIN DEBUG =====');
+    } catch (e) {
+      debugPrint('❌ Error en debug: $e');
+    }
   }
 
   @override
@@ -83,6 +121,12 @@ class _NoteListScreenState extends State<NoteListScreen>
   void _loadNotes() {
     setState(() {
       _futureNotes = _apiService.getNotes();
+    });
+    
+    // También actualizar el provider
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final noteProvider = Provider.of<NoteProvider>(context, listen: false);
+      noteProvider.loadNotes();
     });
   }
 
@@ -335,18 +379,6 @@ class _NoteListScreenState extends State<NoteListScreen>
                     onTap: () {
                       Navigator.pop(context);
                       _navigateToEditNote(note);
-                    },
-                  ),
-                  _buildModalOption(
-                    icon: Icons.update,
-                    label: 'Actualizar nota',
-                    color: noteColor,
-                    onTap: () {
-                      Navigator.pop(context);
-                      SnackbarUtils.showInfoSnackbar(
-                        context,
-                        'Función de actualizar próximamente',
-                      );
                     },
                   ),
                   _buildModalOption(
@@ -903,7 +935,7 @@ class _NoteListScreenState extends State<NoteListScreen>
       backgroundColor: themeProvider.isDarkMode ? Colors.grey[900] : Colors.grey[50],
       drawer: LeftMenu(onClose: _closeLeftMenu),
       floatingActionButton: _buildAnimatedFAB(),
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat, // ✅ Esquina inferior derecha
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       body: SafeArea(
         child: Column(
           children: [

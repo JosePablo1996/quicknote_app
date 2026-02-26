@@ -1,19 +1,58 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ThemeProvider extends ChangeNotifier {
+  static const String _themeKey = 'is_dark_mode';
   bool _isDarkMode = false;
 
   bool get isDarkMode => _isDarkMode;
 
   ThemeData get currentTheme => _isDarkMode ? darkTheme : lightTheme;
 
-  void toggleTheme() {
+  ThemeProvider() {
+    _loadThemeFromPrefs();
+  }
+
+  // Cargar tema guardado al iniciar
+  Future<void> _loadThemeFromPrefs() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      _isDarkMode = prefs.getBool(_themeKey) ?? false;
+      notifyListeners();
+    } catch (e) {
+      print('Error cargando tema: $e');
+      _isDarkMode = false;
+    }
+  }
+
+  // Cambiar tema y guardar preferencia
+  Future<void> toggleTheme() async {
     _isDarkMode = !_isDarkMode;
+    
+    // Guardar en SharedPreferences
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_themeKey, _isDarkMode);
+    } catch (e) {
+      print('Error guardando tema: $e');
+    }
+    
     notifyListeners();
   }
 
-  void setTheme(bool isDark) {
+  // Establecer tema específico y guardar
+  Future<void> setTheme(bool isDark) async {
+    if (_isDarkMode == isDark) return;
+    
     _isDarkMode = isDark;
+    
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_themeKey, _isDarkMode);
+    } catch (e) {
+      print('Error guardando tema: $e');
+    }
+    
     notifyListeners();
   }
 
@@ -27,7 +66,7 @@ class ThemeProvider extends ChangeNotifier {
       foregroundColor: Colors.black,
       elevation: 0.5,
     ),
-    cardTheme: const CardThemeData( // ✅ Usar CardThemeData
+    cardTheme: const CardThemeData(
       color: Colors.white,
       elevation: 2,
       shadowColor: Colors.grey,
@@ -56,7 +95,7 @@ class ThemeProvider extends ChangeNotifier {
       foregroundColor: Colors.white,
       elevation: 0.5,
     ),
-    cardTheme: CardThemeData( // ✅ Usar CardThemeData
+    cardTheme: CardThemeData(
       color: Colors.grey[850],
       elevation: 2,
       shadowColor: Colors.black,

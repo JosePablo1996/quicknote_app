@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'providers/theme_provider.dart';
 import 'providers/security_provider.dart';
+import 'providers/note_provider.dart'; // 👈 IMPORTAR NOTE PROVIDER
 import 'screens/splash_screen.dart';
 import 'screens/app_lock_screen.dart';
 import 'screens/auth_method_selector.dart';
@@ -29,6 +30,7 @@ class MyApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
         ChangeNotifierProvider(create: (_) => SecurityProvider()),
+        ChangeNotifierProvider(create: (_) => NoteProvider()), // 👈 AGREGADO
       ],
       child: Consumer2<ThemeProvider, SecurityProvider>(
         builder: (context, themeProvider, securityProvider, child) {

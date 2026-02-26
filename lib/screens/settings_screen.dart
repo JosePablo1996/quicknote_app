@@ -5,7 +5,8 @@ import '../providers/theme_provider.dart';
 import '../providers/security_provider.dart';
 import 'security_setup_screen.dart';
 import 'developer_profile_screen.dart';
-import 'changelog_screen.dart'; // 👈 IMPORTAMOS LA NUEVA PANTALLA
+import 'changelog_screen.dart';
+import 'backup_screen.dart'; // 👈 IMPORTAMOS LA NUEVA PANTALLA DE RESPALDO
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -224,7 +225,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
           const SizedBox(height: 20),
 
-          // SECCIÓN: RESPALDO
+          // SECCIÓN: RESPALDO - AHORA CON NAVEGACIÓN A BACKUP_SCREEN
           _buildSectionHeader('Respaldo', isDarkMode),
           _buildGlassCard(
             child: Column(
@@ -233,7 +234,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   icon: Icons.backup_rounded,
                   iconColor: Colors.green,
                   title: 'Respaldo manual',
-                  subtitle: 'Crear copia de seguridad de tus notas',
+                  subtitle: 'Crear y restaurar copias de seguridad de tus notas',
                   trailing: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
@@ -246,7 +247,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: const Text(
-                      'Respaldar',
+                      'Administrar',
                       style: TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.w600,
@@ -256,14 +257,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                   isDarkMode: isDarkMode,
                   onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: const Text('Respaldo manual - Próximamente'),
-                        backgroundColor: Colors.green,
-                        behavior: SnackBarBehavior.floating,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const BackupScreen(),
                       ),
                     );
                   },
@@ -275,7 +272,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
           const SizedBox(height: 20),
 
-          // SECCIÓN: ACERCA DE (con registro de cambios funcional)
+          // SECCIÓN: ACERCA DE
           _buildSectionHeader('Acerca de', isDarkMode),
           _buildGlassCard(
             child: Column(
@@ -284,7 +281,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   icon: Icons.info,
                   iconColor: Colors.lightBlue,
                   title: 'Versión',
-                  subtitle: 'QuickNote v2.1.1',
+                  subtitle: 'QuickNote v2.1.2',
                   isDarkMode: isDarkMode,
                   showArrow: false,
                 ),
@@ -310,7 +307,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
           const SizedBox(height: 20),
 
-          // SECCIÓN: INFORMACIÓN DEL DESARROLLADOR
+          // SECCIÓN: INFORMACIÓN DEL DESARROLLADOR - SIN BADGE "DESARROLLADOR FULL STACK"
           _buildSectionHeader('Información del desarrollador', isDarkMode),
           _buildDeveloperEnhancedCard(isDarkMode),
 
@@ -488,7 +485,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  // Tarjeta mejorada para información del desarrollador
+  // Tarjeta mejorada para información del desarrollador - SIN BADGE
   Widget _buildDeveloperEnhancedCard(bool isDarkMode) {
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 8),
@@ -589,35 +586,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       fontWeight: FontWeight.bold,
                       letterSpacing: 0.5,
                     ),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                
-                // Badge de desarrollador
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: isDarkMode ? Colors.amber.shade900 : Colors.amber.shade50,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.code,
-                        size: 14,
-                        color: isDarkMode ? Colors.amber.shade200 : Colors.amber.shade800,
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        'Desarrollador Full Stack',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: isDarkMode ? Colors.amber.shade200 : Colors.amber.shade800,
-                        ),
-                      ),
-                    ],
                   ),
                 ),
                 const SizedBox(height: 20),

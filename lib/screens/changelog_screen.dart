@@ -11,7 +11,56 @@ class ChangelogScreen extends StatefulWidget {
 }
 
 class _ChangelogScreenState extends State<ChangelogScreen> {
-  final List<VersionData> _versions = [
+  final List<VersionData> _versions = const [
+    // VERSIÓN 2.1.2 - ACTUAL
+    VersionData(
+      version: '2.1.2',
+      date: '26 de Febrero 2026',
+      title: 'Sistema de Backup/Restore y Mejoras Visuales',
+      changes: [
+        ChangeItem(
+          type: ChangeType.newFeature,
+          description: 'Sistema completo de backup manual: guarda todas tus notas en JSON',
+        ),
+        ChangeItem(
+          type: ChangeType.newFeature,
+          description: 'Restauración de notas desde cualquier backup disponible',
+        ),
+        ChangeItem(
+          type: ChangeType.newFeature,
+          description: 'Lista de backups con información detallada (fecha, hora, tamaño, notas)',
+        ),
+        ChangeItem(
+          type: ChangeType.newFeature,
+          description: 'Opción para eliminar backups antiguos',
+        ),
+        ChangeItem(
+          type: ChangeType.enhancement,
+          description: 'Barra de progreso dinámica 0-100% con colores (amarillo → naranja → verde)',
+        ),
+        ChangeItem(
+          type: ChangeType.enhancement,
+          description: 'Menú lateral rediseñado: avatar en esquina inferior izquierda',
+        ),
+        ChangeItem(
+          type: ChangeType.enhancement,
+          description: 'Acceso directo a BackupScreen desde menú lateral',
+        ),
+        ChangeItem(
+          type: ChangeType.enhancement,
+          description: 'Versión actualizada a v2.1.2 en toda la app',
+        ),
+        ChangeItem(
+          type: ChangeType.fix,
+          description: 'Corrección de errores de null en restauración de backups',
+        ),
+        ChangeItem(
+          type: ChangeType.fix,
+          description: 'Eliminados logs y mensajes de depuración',
+        ),
+      ],
+    ),
+    // VERSIÓN 2.1.1
     VersionData(
       version: '2.1.1',
       date: '25 de Febrero 2026',
@@ -47,6 +96,7 @@ class _ChangelogScreenState extends State<ChangelogScreen> {
         ),
       ],
     ),
+    // VERSIÓN 2.1.0
     VersionData(
       version: '2.1.0',
       date: '24 de Febrero 2026',
@@ -74,6 +124,7 @@ class _ChangelogScreenState extends State<ChangelogScreen> {
         ),
       ],
     ),
+    // VERSIÓN 2.0.0
     VersionData(
       version: '2.0.0',
       date: '24 de Febrero 2026',
@@ -101,6 +152,7 @@ class _ChangelogScreenState extends State<ChangelogScreen> {
         ),
       ],
     ),
+    // VERSIÓN 1.2.0
     VersionData(
       version: '1.2.0',
       date: '24 de Febrero 2026',
@@ -128,6 +180,7 @@ class _ChangelogScreenState extends State<ChangelogScreen> {
         ),
       ],
     ),
+    // VERSIÓN 1.1.0
     VersionData(
       version: '1.1.0',
       date: '23 de Febrero 2026',
@@ -155,6 +208,7 @@ class _ChangelogScreenState extends State<ChangelogScreen> {
         ),
       ],
     ),
+    // VERSIÓN 1.0.0
     VersionData(
       version: '1.0.0',
       date: '23 de Febrero 2026',
@@ -171,10 +225,6 @@ class _ChangelogScreenState extends State<ChangelogScreen> {
         ChangeItem(
           type: ChangeType.newFeature,
           description: 'Manejo de errores y redirects (307)',
-        ),
-        ChangeItem(
-          type: ChangeType.enhancement,
-          description: 'Logging para debug',
         ),
       ],
       isInitial: true,
@@ -267,7 +317,6 @@ class _ChangelogScreenState extends State<ChangelogScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Header con versión y badge "NUEVO"
                 Row(
                   children: [
                     Container(
@@ -301,11 +350,11 @@ class _ChangelogScreenState extends State<ChangelogScreen> {
                     if (isLatest)
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
+                        decoration: const BoxDecoration(
+                          gradient: LinearGradient(
                             colors: [Colors.amber, Colors.orange],
                           ),
-                          borderRadius: BorderRadius.circular(15),
+                          borderRadius: BorderRadius.all(Radius.circular(15)),
                         ),
                         child: const Text(
                           'NUEVO',
@@ -321,7 +370,6 @@ class _ChangelogScreenState extends State<ChangelogScreen> {
                 
                 const SizedBox(height: 12),
                 
-                // Título de la versión
                 Text(
                   version.title,
                   style: TextStyle(
@@ -333,7 +381,6 @@ class _ChangelogScreenState extends State<ChangelogScreen> {
                 
                 const SizedBox(height: 16),
                 
-                // Lista de cambios
                 ...version.changes.map((change) => _buildChangeItem(change, isDarkMode)),
                 
                 if (version.isInitial) ...[
@@ -351,21 +398,21 @@ class _ChangelogScreenState extends State<ChangelogScreen> {
                             : Colors.green.shade200.withValues(alpha: 0.5),
                       ),
                     ),
-                    child: Row(
+                    child: const Row(
                       children: [
                         Icon(
                           Icons.emoji_events,
-                          color: isDarkMode ? Colors.green.shade300 : Colors.green.shade600,
+                          color: Colors.green,
                           size: 20,
                         ),
-                        const SizedBox(width: 12),
+                        SizedBox(width: 12),
                         Expanded(
                           child: Text(
                             '¡Versión inicial de QuickNote! 🚀',
                             style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w600,
-                              color: isDarkMode ? Colors.green.shade300 : Colors.green.shade700,
+                              color: Colors.green,
                             ),
                           ),
                         ),
@@ -382,28 +429,6 @@ class _ChangelogScreenState extends State<ChangelogScreen> {
   }
 
   Widget _buildChangeItem(ChangeItem change, bool isDarkMode) {
-    Color getIconColor() {
-      switch (change.type) {
-        case ChangeType.newFeature:
-          return Colors.green;
-        case ChangeType.enhancement:
-          return Colors.blue;
-        case ChangeType.fix:
-          return Colors.orange;
-      }
-    }
-
-    IconData getIcon() {
-      switch (change.type) {
-        case ChangeType.newFeature:
-          return Icons.rocket_launch;
-        case ChangeType.enhancement:
-          return Icons.brush;
-        case ChangeType.fix:
-          return Icons.bug_report;
-      }
-    }
-
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
@@ -413,13 +438,25 @@ class _ChangelogScreenState extends State<ChangelogScreen> {
             margin: const EdgeInsets.only(top: 2),
             padding: const EdgeInsets.all(4),
             decoration: BoxDecoration(
-              color: getIconColor().withValues(alpha: 0.1),
+              color: change.type == ChangeType.newFeature
+                  ? Colors.green.withValues(alpha: 0.1)
+                  : change.type == ChangeType.enhancement
+                      ? Colors.blue.withValues(alpha: 0.1)
+                      : Colors.orange.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(6),
             ),
             child: Icon(
-              getIcon(),
+              change.type == ChangeType.newFeature
+                  ? Icons.rocket_launch
+                  : change.type == ChangeType.enhancement
+                      ? Icons.brush
+                      : Icons.bug_report,
               size: 14,
-              color: getIconColor(),
+              color: change.type == ChangeType.newFeature
+                  ? Colors.green
+                  : change.type == ChangeType.enhancement
+                      ? Colors.blue
+                      : Colors.orange,
             ),
           ),
           const SizedBox(width: 12),
@@ -449,7 +486,7 @@ class ChangeItem {
   final ChangeType type;
   final String description;
 
-  ChangeItem({
+  const ChangeItem({
     required this.type,
     required this.description,
   });
@@ -462,7 +499,7 @@ class VersionData {
   final List<ChangeItem> changes;
   final bool isInitial;
 
-  VersionData({
+  const VersionData({
     required this.version,
     required this.date,
     required this.title,

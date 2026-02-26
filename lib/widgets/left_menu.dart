@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:provider/provider.dart';
 import '../screens/calendar_screen.dart';
 import '../screens/settings_screen.dart';
+import '../screens/backup_screen.dart'; // 👈 Importado para respaldo
 import '../providers/theme_provider.dart';
 import '../utils/snackbar_utils.dart';
 
@@ -24,7 +25,6 @@ class _LeftMenuState extends State<LeftMenu>
   void initState() {
     super.initState();
     
-    // Animación más simple y optimizada
     _fadeController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 400),
@@ -42,9 +42,8 @@ class _LeftMenuState extends State<LeftMenu>
     super.dispose();
   }
 
-  // Función genérica para navegar a cualquier pantalla
   void _navigateToScreen(Widget screen) {
-    widget.onClose(); // Cerrar el menú
+    widget.onClose();
     Navigator.push(
       context,
       PageRouteBuilder(
@@ -70,9 +69,8 @@ class _LeftMenuState extends State<LeftMenu>
     );
   }
 
-  // Función para mostrar mensaje de funcionalidad próximamente
   void _showComingSoon(String feature) {
-    widget.onClose(); // Cerrar el menú
+    widget.onClose();
     SnackbarUtils.showInfoSnackbar(
       context,
       '🔜 $feature - Próximamente',
@@ -138,9 +136,9 @@ class _LeftMenuState extends State<LeftMenu>
                 child: SafeArea(
                   child: Column(
                     children: [
-                      // HEADER CENTRADO CON TÍTULO Y VERSIÓN
+                      // HEADER MEJORADO CON AVATAR EN ESQUINA INFERIOR IZQUIERDA
                       Container(
-                        padding: const EdgeInsets.symmetric(vertical: 25),
+                        height: 180,
                         margin: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
@@ -169,70 +167,43 @@ class _LeftMenuState extends State<LeftMenu>
                           ],
                         ),
                         child: Stack(
+                          clipBehavior: Clip.none,
                           children: [
-                            // Botón de cerrar posicionado a la derecha
+                            // Botón de cerrar
                             Positioned(
+                              top: 12,
                               right: 12,
-                              top: 0,
-                              bottom: 0,
-                              child: Center(
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withValues(alpha: 0.2),
-                                    borderRadius: BorderRadius.circular(15),
-                                    border: Border.all(
-                                      color: Colors.white.withValues(alpha: 0.3),
-                                      width: 1,
-                                    ),
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withValues(alpha: 0.2),
+                                  borderRadius: BorderRadius.circular(15),
+                                  border: Border.all(
+                                    color: Colors.white.withValues(alpha: 0.3),
+                                    width: 1,
                                   ),
-                                  child: IconButton(
-                                    icon: Icon(
-                                      Icons.close, 
-                                      color: Colors.white.withValues(alpha: 0.9), 
-                                      size: 22
-                                    ),
-                                    onPressed: widget.onClose,
-                                    padding: const EdgeInsets.all(8),
-                                    constraints: const BoxConstraints(),
+                                ),
+                                child: IconButton(
+                                  icon: Icon(
+                                    Icons.close, 
+                                    color: Colors.white.withValues(alpha: 0.9), 
+                                    size: 20,
                                   ),
+                                  onPressed: widget.onClose,
+                                  padding: const EdgeInsets.all(6),
+                                  constraints: const BoxConstraints(),
                                 ),
                               ),
                             ),
                             
-                            // Contenido centrado
+                            // Contenido centrado (nombre y versión)
                             Center(
                               child: Column(
-                                mainAxisSize: MainAxisSize.min,
+                                mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Container(
-                                    padding: const EdgeInsets.all(12),
-                                    decoration: BoxDecoration(
-                                      gradient: const LinearGradient(
-                                        colors: [
-                                          Colors.amber,
-                                          Colors.orange,
-                                        ],
-                                      ),
-                                      borderRadius: BorderRadius.circular(20),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: Colors.amber.withValues(alpha: 0.4),
-                                          blurRadius: 12,
-                                          spreadRadius: 1,
-                                        ),
-                                      ],
-                                    ),
-                                    child: const Icon(
-                                      Icons.note_alt,
-                                      color: Colors.white,
-                                      size: 32,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 12),
                                   const Text(
                                     'QuickNote',
                                     style: TextStyle(
-                                      fontSize: 28,
+                                      fontSize: 32,
                                       fontWeight: FontWeight.bold,
                                       color: Colors.white,
                                       letterSpacing: 1,
@@ -245,21 +216,21 @@ class _LeftMenuState extends State<LeftMenu>
                                       ],
                                     ),
                                   ),
-                                  const SizedBox(height: 6),
+                                  const SizedBox(height: 8),
                                   Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                                     decoration: BoxDecoration(
                                       color: Colors.white.withValues(alpha: 0.2),
-                                      borderRadius: BorderRadius.circular(15),
+                                      borderRadius: BorderRadius.circular(20),
                                       border: Border.all(
                                         color: Colors.white.withValues(alpha: 0.3),
                                         width: 1,
                                       ),
                                     ),
                                     child: const Text(
-                                      'v 2.1.1',
+                                      'v 2.1.2', // 👈 Versión actualizada
                                       style: TextStyle(
-                                        fontSize: 11,
+                                        fontSize: 12,
                                         fontWeight: FontWeight.w600,
                                         color: Colors.white,
                                         letterSpacing: 0.5,
@@ -269,9 +240,48 @@ class _LeftMenuState extends State<LeftMenu>
                                 ],
                               ),
                             ),
+                            
+                            // Avatar en esquina inferior izquierda
+                            Positioned(
+                              left: 16,
+                              bottom: -20,
+                              child: Container(
+                                width: 70,
+                                height: 70,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  gradient: const LinearGradient(
+                                    colors: [Colors.amber, Colors.orange],
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                  ),
+                                  border: Border.all(
+                                    color: Colors.white,
+                                    width: 3,
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.amber.withValues(alpha: 0.4),
+                                      blurRadius: 15,
+                                      spreadRadius: 2,
+                                      offset: const Offset(0, 5),
+                                    ),
+                                  ],
+                                ),
+                                child: const Center(
+                                  child: Icon(
+                                    Icons.note_alt,
+                                    color: Colors.white,
+                                    size: 35,
+                                  ),
+                                ),
+                              ),
+                            ),
                           ],
                         ),
                       ),
+
+                      const SizedBox(height: 30),
 
                       // CONTENIDO DEL MENÚ
                       Expanded(
@@ -347,10 +357,10 @@ class _LeftMenuState extends State<LeftMenu>
                               title: 'Sincronizar y respaldar',
                               items: [
                                 _MenuItemData(
-                                  label: 'Sincronizar ahora',
-                                  icon: Icons.sync,
+                                  label: 'Respaldo manual',
+                                  icon: Icons.backup,
                                   color: Colors.lightBlue.shade400,
-                                  onTap: () => _showComingSoon('Sincronización'),
+                                  onTap: () => _navigateToScreen(const BackupScreen()), // 👈 Navega a BackupScreen
                                 ),
                               ],
                               isDarkMode: isDarkMode,
