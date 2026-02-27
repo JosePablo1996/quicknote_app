@@ -3,7 +3,9 @@ import 'dart:ui';
 import 'package:provider/provider.dart';
 import '../screens/calendar_screen.dart';
 import '../screens/settings_screen.dart';
-import '../screens/backup_screen.dart'; // 👈 Importado para respaldo
+import '../screens/backup_screen.dart';
+import '../screens/trash_screen.dart';
+import '../screens/help_screen.dart'; // 👈 IMPORTAMOS LA PANTALLA DE AYUDA
 import '../providers/theme_provider.dart';
 import '../utils/snackbar_utils.dart';
 
@@ -228,7 +230,7 @@ class _LeftMenuState extends State<LeftMenu>
                                       ),
                                     ),
                                     child: const Text(
-                                      'v 2.1.2', // 👈 Versión actualizada
+                                      'v 2.2.0', // 👈 ACTUALIZAMOS A VERSIÓN 2.2.0
                                       style: TextStyle(
                                         fontSize: 12,
                                         fontWeight: FontWeight.w600,
@@ -347,7 +349,7 @@ class _LeftMenuState extends State<LeftMenu>
                                   label: 'Papelera',
                                   icon: Icons.delete,
                                   color: Colors.red.shade400,
-                                  onTap: () => _showComingSoon('Papelera'),
+                                  onTap: () => _navigateToScreen(const TrashScreen()),
                                 ),
                               ],
                               isDarkMode: isDarkMode,
@@ -360,7 +362,7 @@ class _LeftMenuState extends State<LeftMenu>
                                   label: 'Respaldo manual',
                                   icon: Icons.backup,
                                   color: Colors.lightBlue.shade400,
-                                  onTap: () => _navigateToScreen(const BackupScreen()), // 👈 Navega a BackupScreen
+                                  onTap: () => _navigateToScreen(const BackupScreen()),
                                 ),
                               ],
                               isDarkMode: isDarkMode,
@@ -373,7 +375,7 @@ class _LeftMenuState extends State<LeftMenu>
                                   label: 'Ayuda y soporte',
                                   icon: Icons.help,
                                   color: Colors.indigo.shade400,
-                                  onTap: () => _showComingSoon('Centro de ayuda'),
+                                  onTap: () => _navigateToScreen(const HelpScreen()), // 👈 AHORA FUNCIONAL
                                 ),
                               ],
                               isDarkMode: isDarkMode,

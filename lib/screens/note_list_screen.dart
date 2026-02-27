@@ -3,7 +3,7 @@ import 'dart:ui';
 import 'package:provider/provider.dart';
 import '../models/note.dart';
 import '../services/api_service.dart';
-import '../providers/note_provider.dart'; // 👈 IMPORTAMOS NOTE PROVIDER
+import '../providers/note_provider.dart';
 import '../widgets/empty_notes_widget.dart';
 import '../widgets/custom_header.dart';
 import '../widgets/note_menu.dart';
@@ -23,7 +23,8 @@ class NoteListScreen extends StatefulWidget {
 class _NoteListScreenState extends State<NoteListScreen>
     with SingleTickerProviderStateMixin {
   final ApiService _apiService = ApiService();
-  late Future<List<Note>> _futureNotes;
+  List<Note> _notes = [];
+  bool _isLoading = false;
   final TextEditingController _searchController = TextEditingController();
   bool _isSearching = false;
   String _selectedCategory = 'Todas';
@@ -51,7 +52,7 @@ class _NoteListScreenState extends State<NoteListScreen>
   @override
   void initState() {
     super.initState();
-    _loadNotes();
+    _loadNotesFromProvider();
     
     // Configurar animaciones para el FAB
     _fabAnimationController = AnimationController(
@@ -72,43 +73,13 @@ class _NoteListScreenState extends State<NoteListScreen>
         curve: Curves.easeInOut,
       ),
     );
-
-    // 👇 CÓDIGO TEMPORAL PARA DEBUG: Cargar notas en el provider al iniciar
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _debugLoadNotesInProvider();
-    });
   }
 
-  // 👇 MÉTODO TEMPORAL PARA DEBUG
-  Future<void> _debugLoadNotesInProvider() async {
-    debugPrint('🔍 ===== DEBUG NOTE PROVIDER =====');
-    try {
-      final noteProvider = Provider.of<NoteProvider>(context, listen: false);
-      await noteProvider.loadNotes();
-      
-      final notes = noteProvider.notes;
-      debugPrint('📋 Notas en provider después de loadNotes: ${notes.length}');
-      
-      if (notes.isEmpty) {
-        debugPrint('⚠️ No hay notas en el provider. Verificando API directamente...');
-        try {
-          final apiNotes = await _apiService.getNotes();
-          debugPrint('📡 API devolvió: ${apiNotes.length} notas');
-          for (var note in apiNotes) {
-            debugPrint('   - ID: ${note.id}, Título: ${note.title}');
-          }
-        } catch (e) {
-          debugPrint('❌ Error al obtener notas de API: $e');
-        }
-      } else {
-        for (var note in notes) {
-          debugPrint('   - ID: ${note.id}, Título: ${note.title}');
-        }
-      }
-      debugPrint('🔍 ===== FIN DEBUG =====');
-    } catch (e) {
-      debugPrint('❌ Error en debug: $e');
-    }
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Escuchar cambios en el provider
+    _loadNotesFromProvider();
   }
 
   @override
@@ -118,16 +89,30 @@ class _NoteListScreenState extends State<NoteListScreen>
     super.dispose();
   }
 
-  void _loadNotes() {
-    setState(() {
-      _futureNotes = _apiService.getNotes();
-    });
+  Future<void> _loadNotesFromProvider() async {
+    if (!mounted) return;
     
-    // También actualizar el provider
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    setState(() => _isLoading = true);
+    
+    try {
       final noteProvider = Provider.of<NoteProvider>(context, listen: false);
-      noteProvider.loadNotes();
-    });
+      await noteProvider.loadNotes();
+      
+      if (mounted) {
+        setState(() {
+          _notes = noteProvider.notes.where((note) => !note.isDeleted).toList();
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        SnackbarUtils.showErrorSnackbar(
+          context,
+          'Error al cargar notas: $e',
+        );
+      }
+    }
   }
 
   // Función para ordenar notas según opción seleccionada
@@ -207,12 +192,36 @@ class _NoteListScreenState extends State<NoteListScreen>
       ),
     );
 
+    if (!mounted) return;
+
     if (confirm == true) {
-      SnackbarUtils.showSuccessSnackbar(
-        context,
-        'Función de eliminar múltiples próximamente',
-      );
-      _exitSelectionMode();
+      final noteProvider = Provider.of<NoteProvider>(context, listen: false);
+      
+      setState(() => _isLoading = true);
+      
+      try {
+        for (var noteId in _selectedNoteIds) {
+          await noteProvider.deleteNote(noteId);
+        }
+        
+        if (mounted) {
+          await _loadNotesFromProvider();
+          _exitSelectionMode();
+          
+          SnackbarUtils.showSuccessSnackbar(
+            context,
+            '${_selectedNoteIds.length} notas movidas a la papelera',
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          setState(() => _isLoading = false);
+          SnackbarUtils.showErrorSnackbar(
+            context,
+            'Error al eliminar notas: $e',
+          );
+        }
+      }
     }
   }
 
@@ -248,18 +257,27 @@ class _NoteListScreenState extends State<NoteListScreen>
       ),
     );
 
+    if (!mounted) return;
+
     if (confirm == true) {
+      final noteProvider = Provider.of<NoteProvider>(context, listen: false);
+      
+      setState(() => _isLoading = true);
+      
       try {
-        await _apiService.deleteNote(note.id);
-        _loadNotes();
-        if (mounted) {
+        final success = await noteProvider.deleteNote(note.id);
+        
+        if (success && mounted) {
+          await _loadNotesFromProvider();
+          
           SnackbarUtils.showSuccessSnackbar(
             context, 
-            '"${note.title}" eliminada'
+            '"${note.title}" movida a la papelera'
           );
         }
       } catch (e) {
         if (mounted) {
+          setState(() => _isLoading = false);
           SnackbarUtils.showErrorSnackbar(
             context, 
             'Error al eliminar: $e'
@@ -497,7 +515,9 @@ class _NoteListScreenState extends State<NoteListScreen>
         builder: (context) => NoteFormScreen(note: note),
       ),
     );
-    if (result == true) _loadNotes();
+    if (result == true && mounted) {
+      _loadNotesFromProvider();
+    }
   }
 
   void _onViewList() {
@@ -529,7 +549,7 @@ class _NoteListScreenState extends State<NoteListScreen>
       context,
       'Sincronizando notas...',
     );
-    _loadNotes();
+    _loadNotesFromProvider();
   }
 
   void _showSortDialog() {
@@ -865,6 +885,14 @@ class _NoteListScreenState extends State<NoteListScreen>
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Creada: ${note.formattedCreatedDate}',
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: isDarkMode ? Colors.grey[500] : Colors.grey[500],
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -889,7 +917,7 @@ class _NoteListScreenState extends State<NoteListScreen>
         );
       },
       child: FloatingActionButton(
-        onPressed: _isSelectionMode
+        onPressed: _isSelectionMode || _isLoading
             ? null
             : () async {
                 // Animación al presionar
@@ -912,9 +940,11 @@ class _NoteListScreenState extends State<NoteListScreen>
                 // Reiniciar animación después de volver
                 _fabAnimationController.repeat(reverse: true);
                 
-                if (result == true) _loadNotes();
+                if (result == true && mounted) {
+                  _loadNotesFromProvider();
+                }
               },
-        backgroundColor: _isSelectionMode ? Colors.grey : Colors.blue,
+        backgroundColor: _isSelectionMode || _isLoading ? Colors.grey : Colors.blue,
         foregroundColor: Colors.white,
         elevation: 8,
         shape: RoundedRectangleBorder(
@@ -929,10 +959,11 @@ class _NoteListScreenState extends State<NoteListScreen>
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
+    final isDarkMode = themeProvider.isDarkMode;
     
     return Scaffold(
       key: _scaffoldKey,
-      backgroundColor: themeProvider.isDarkMode ? Colors.grey[900] : Colors.grey[50],
+      backgroundColor: isDarkMode ? Colors.grey[900] : Colors.grey[50],
       drawer: LeftMenu(onClose: _closeLeftMenu),
       floatingActionButton: _buildAnimatedFAB(),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
@@ -1005,157 +1036,87 @@ class _NoteListScreenState extends State<NoteListScreen>
             
             Expanded(
               child: RefreshIndicator(
-                onRefresh: () async {
-                  await Future.delayed(const Duration(seconds: 1));
-                  _loadNotes();
-                },
+                onRefresh: _loadNotesFromProvider,
                 color: Colors.blue,
                 backgroundColor: Colors.white,
                 displacement: 40,
-                child: FutureBuilder<List<Note>>(
-                  future: _futureNotes,
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(
+                child: _isLoading
+                    ? const Center(
                         child: CircularProgressIndicator(
                           color: Colors.blue,
                           strokeWidth: 3,
                         ),
-                      );
-                    }
-
-                    if (snapshot.hasError) {
-                      // Manejo mejorado de errores con mensajes específicos
-                      String errorMessage = 'Error de conexión';
-                      
-                      if (snapshot.error.toString().contains('Timeout')) {
-                        errorMessage = 'El servidor está tardando en responder.\n'
-                            'Desliza hacia abajo para refrescar.';
-                      } else if (snapshot.error.toString().contains('SocketException')) {
-                        errorMessage = 'No hay conexión a internet.\n'
-                            'Verifica tu conexión y vuelve a intentar.';
-                      }
-
-                      return Center(
-                        child: Padding(
-                          padding: const EdgeInsets.all(24),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(20),
-                                decoration: BoxDecoration(
-                                  color: Colors.red.shade50,
-                                  shape: BoxShape.circle,
+                      )
+                    : _notes.isEmpty
+                        ? EmptyNotesWidget(
+                            onCreateNote: () async {
+                              final result = await Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const NoteFormScreen(),
                                 ),
-                                child: Icon(
-                                  Icons.wifi_off,
-                                  size: 60,
-                                  color: Colors.red.shade400,
-                                ),
-                              ),
-                              const SizedBox(height: 20),
-                              Text(
-                                errorMessage,
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  color: themeProvider.isDarkMode ? Colors.white70 : Colors.grey[600],
-                                ),
-                              ),
-                              const SizedBox(height: 30),
-                              ElevatedButton.icon(
-                                onPressed: _loadNotes,
-                                icon: const Icon(Icons.refresh),
-                                label: const Text('Reintentar'),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.blue,
-                                  foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 30,
-                                    vertical: 15,
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(30),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    }
-
-                    final notes = snapshot.data ?? [];
-                    
-                    if (notes.isEmpty) {
-                      return EmptyNotesWidget(
-                        onCreateNote: () async {
-                          final result = await Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const NoteFormScreen(),
-                            ),
-                          );
-                          if (result == true) _loadNotes();
-                        },
-                      );
-                    }
-
-                    final filteredNotes = _selectedCategory == 'Todas'
-                        ? notes
-                        : notes.where((note) => note.id % 2 == 0).toList();
-                    
-                    final sortedNotes = _sortNotes(filteredNotes);
-
-                    if (_isGridView) {
-                      return GridView.builder(
-                        padding: const EdgeInsets.all(16),
-                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          childAspectRatio: 0.8,
-                          crossAxisSpacing: 12,
-                          mainAxisSpacing: 12,
-                        ),
-                        itemCount: sortedNotes.length,
-                        itemBuilder: (context, index) {
-                          final note = sortedNotes[index];
-                          final initials = _getInitials(note.title);
-                          final noteColor = _getNoteColor(note);
-                          
-                          return _buildGridCard(
-                            note, 
-                            initials, 
-                            noteColor, 
-                            themeProvider.isDarkMode
-                          );
-                        },
-                      );
-                    } else {
-                      return ListView.builder(
-                        padding: const EdgeInsets.all(16),
-                        itemCount: sortedNotes.length,
-                        itemBuilder: (context, index) {
-                          final note = sortedNotes[index];
-                          final initials = _getInitials(note.title);
-                          final noteColor = _getNoteColor(note);
-                          
-                          return _buildListCard(
-                            note, 
-                            initials, 
-                            noteColor, 
-                            themeProvider.isDarkMode
-                          );
-                        },
-                      );
-                    }
-                  },
-                ),
+                              );
+                              if (result == true && mounted) {
+                                _loadNotesFromProvider();
+                              }
+                            },
+                          )
+                        : _buildNotesList(isDarkMode),
               ),
             ),
           ],
         ),
       ),
     );
+  }
+
+  Widget _buildNotesList(bool isDarkMode) {
+    final filteredNotes = _selectedCategory == 'Todas'
+        ? _notes
+        : _notes.where((note) => note.tags.contains(_selectedCategory)).toList();
+    
+    final sortedNotes = _sortNotes(filteredNotes);
+
+    if (_isGridView) {
+      return GridView.builder(
+        padding: const EdgeInsets.all(16),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          childAspectRatio: 0.8,
+          crossAxisSpacing: 12,
+          mainAxisSpacing: 12,
+        ),
+        itemCount: sortedNotes.length,
+        itemBuilder: (context, index) {
+          final note = sortedNotes[index];
+          final initials = _getInitials(note.title);
+          final noteColor = _getNoteColor(note);
+          
+          return _buildGridCard(
+            note, 
+            initials, 
+            noteColor, 
+            isDarkMode
+          );
+        },
+      );
+    } else {
+      return ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: sortedNotes.length,
+        itemBuilder: (context, index) {
+          final note = sortedNotes[index];
+          final initials = _getInitials(note.title);
+          final noteColor = _getNoteColor(note);
+          
+          return _buildListCard(
+            note, 
+            initials, 
+            noteColor, 
+            isDarkMode
+          );
+        },
+      );
+    }
   }
 }

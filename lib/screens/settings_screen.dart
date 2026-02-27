@@ -272,7 +272,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
           const SizedBox(height: 20),
 
-          // SECCIÓN: ACERCA DE
+          // SECCIÓN: ACERCA DE - ACTUALIZADA A VERSIÓN 2.2.0
           _buildSectionHeader('Acerca de', isDarkMode),
           _buildGlassCard(
             child: Column(
@@ -281,7 +281,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   icon: Icons.info,
                   iconColor: Colors.lightBlue,
                   title: 'Versión',
-                  subtitle: 'QuickNote v2.1.2',
+                  subtitle: 'QuickNote v2.2.0', // 👈 ACTUALIZADO A 2.2.0
                   isDarkMode: isDarkMode,
                   showArrow: false,
                 ),

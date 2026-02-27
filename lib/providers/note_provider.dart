@@ -5,12 +5,14 @@ import '../services/api_service.dart';
 
 class NoteProvider extends ChangeNotifier {
   List<Note> _notes = [];
+  List<Note> _deletedNotes = []; // Nueva lista para notas eliminadas
   bool _isLoading = false;
   String? _error;
   final ApiService _apiService = ApiService();
 
   // Getters
   List<Note> get notes => List.unmodifiable(_notes);
+  List<Note> get deletedNotes => List.unmodifiable(_deletedNotes); // Getter para notas eliminadas
   bool get isLoading => _isLoading;
   String? get error => _error;
 
@@ -76,21 +78,122 @@ class NoteProvider extends ChangeNotifier {
     }
   }
 
-  // Eliminar nota
+  // ========== MÉTODOS PARA PAPELERA ==========
+
+  // Eliminar nota (mover a papelera)
   Future<bool> deleteNote(int id) async {
     _setLoading(true);
     try {
-      await _apiService.deleteNote(id);
-      _notes.removeWhere((note) => note.id == id);
-      _error = null;
-      debugPrint('✅ Nota eliminada: $id');
-      debugPrint('   Total notas ahora: ${_notes.length}');
-      return true;
+      // Buscar la nota en la lista principal
+      final noteIndex = _notes.indexWhere((note) => note.id == id);
+      if (noteIndex >= 0) {
+        final note = _notes.removeAt(noteIndex);
+        
+        // Marcar como eliminada y agregar fecha de eliminación
+        final deletedNote = note.copyWith(
+          deletedAt: DateTime.now().toIso8601String(),
+        );
+        
+        _deletedNotes.add(deletedNote);
+        notifyListeners();
+        
+        // También eliminar de la API
+        await _apiService.deleteNote(id);
+        
+        debugPrint('✅ Nota movida a papelera: $id - ${note.title}');
+        debugPrint('   Notas activas: ${_notes.length}');
+        debugPrint('   Notas en papelera: ${_deletedNotes.length}');
+        return true;
+      }
+      return false;
     } catch (e) {
       _error = 'Error al eliminar nota: $e';
+      debugPrint('❌ Error al eliminar nota: $e');
       return false;
     } finally {
       _setLoading(false);
+    }
+  }
+
+  // Restaurar nota desde la papelera
+  Future<bool> restoreNote(int id) async {
+    try {
+      final noteIndex = _deletedNotes.indexWhere((note) => note.id == id);
+      if (noteIndex >= 0) {
+        final note = _deletedNotes.removeAt(noteIndex);
+        
+        // Limpiar la fecha de eliminación
+        final restoredNote = note.copyWith(
+          deletedAt: null,
+        );
+        
+        _notes.add(restoredNote);
+        notifyListeners();
+        
+        debugPrint('✅ Nota restaurada: $id - ${note.title}');
+        debugPrint('   Notas activas: ${_notes.length}');
+        debugPrint('   Notas en papelera: ${_deletedNotes.length}');
+        
+        // Aquí podrías llamar a la API para restaurar si tienes ese endpoint
+        // Por ahora, como la nota ya fue eliminada de la API, necesitarías crearla de nuevo
+        await _apiService.createNote(restoredNote.title, restoredNote.content);
+        
+        return true;
+      }
+      return false;
+    } catch (e) {
+      _error = 'Error al restaurar nota: $e';
+      debugPrint('❌ Error al restaurar nota: $e');
+      return false;
+    }
+  }
+
+  // Eliminar permanentemente de la papelera
+  Future<bool> deletePermanently(int id) async {
+    try {
+      final noteIndex = _deletedNotes.indexWhere((note) => note.id == id);
+      if (noteIndex >= 0) {
+        _deletedNotes.removeAt(noteIndex);
+        notifyListeners();
+        
+        debugPrint('✅ Nota eliminada permanentemente: $id');
+        debugPrint('   Notas en papelera: ${_deletedNotes.length}');
+        
+        // Aquí no necesitas llamar a la API porque la nota ya fue eliminada
+        // cuando se movió a la papelera
+        
+        return true;
+      }
+      return false;
+    } catch (e) {
+      _error = 'Error al eliminar permanentemente: $e';
+      debugPrint('❌ Error al eliminar permanentemente: $e');
+      return false;
+    }
+  }
+
+  // Vaciar toda la papelera
+  Future<void> emptyTrash() async {
+    try {
+      _deletedNotes.clear();
+      notifyListeners();
+      
+      debugPrint('✅ Papelera vaciada');
+      debugPrint('   Notas activas: ${_notes.length}');
+      debugPrint('   Notas en papelera: ${_deletedNotes.length}');
+    } catch (e) {
+      _error = 'Error al vaciar papelera: $e';
+      debugPrint('❌ Error al vaciar papelera: $e');
+    }
+  }
+
+  // Cargar notas eliminadas (puedes implementar esto si tienes un endpoint)
+  Future<void> loadDeletedNotes() async {
+    // Por ahora, mantenemos las que ya tenemos en memoria
+    // Si tuvieras un endpoint para obtener notas eliminadas, lo llamarías aquí
+    debugPrint('📋 Notas en papelera: ${_deletedNotes.length}');
+    for (var note in _deletedNotes) {
+      debugPrint('   - ID: ${note.id}, Título: ${note.title}, Eliminada: ${note.deletedAt}');
     }
   }
 
@@ -189,6 +292,15 @@ class NoteProvider extends ChangeNotifier {
   Note? getNoteById(int id) {
     try {
       return _notes.firstWhere((note) => note.id == id);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  // Obtener nota eliminada por ID
+  Note? getDeletedNoteById(int id) {
+    try {
+      return _deletedNotes.firstWhere((note) => note.id == id);
     } catch (e) {
       return null;
     }
