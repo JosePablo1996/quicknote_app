@@ -563,8 +563,10 @@ class _ChangelogScreenState extends State<ChangelogScreen> {
                           
                           const Spacer(),
                           
-                          // Icono de expandir/contraer
-                          Container(
+                          // Icono de expandir/contraer con animación
+                          AnimatedContainer(
+                            duration: const Duration(milliseconds: 300),
+                            curve: Curves.easeInOut,
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
                               color: (isLatest ? Colors.purple : (isDarkMode ? Colors.grey[800] : Colors.grey[200]))!.withValues(alpha: 0.2),
@@ -576,10 +578,14 @@ class _ChangelogScreenState extends State<ChangelogScreen> {
                                 width: 1,
                               ),
                             ),
-                            child: Icon(
-                              isExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
-                              color: isLatest ? Colors.purple : (isDarkMode ? Colors.grey[400] : Colors.grey[600]),
-                              size: 20,
+                            child: AnimatedRotation(
+                              duration: const Duration(milliseconds: 300),
+                              turns: isExpanded ? 0.5 : 0.0,
+                              child: Icon(
+                                Icons.keyboard_arrow_down,
+                                color: isLatest ? Colors.purple : (isDarkMode ? Colors.grey[400] : Colors.grey[600]),
+                                size: 20,
+                              ),
                             ),
                           ),
                         ],
@@ -588,128 +594,148 @@ class _ChangelogScreenState extends State<ChangelogScreen> {
                   ),
                 ),
                 
-                // CONTENIDO EXPANDIBLE
-                if (isExpanded) ...[
-                  const Divider(height: 1, thickness: 1, indent: 20, endIndent: 20),
-                  
-                  Padding(
-                    padding: const EdgeInsets.all(20),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // TÍTULO DE LA VERSIÓN DENTRO DE LA TARJETA EXPANDIDA
-                        Container(
-                          margin: const EdgeInsets.only(bottom: 20),
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: isLatest
-                                  ? [Colors.purple.shade50, Colors.blue.shade50]
-                                  : [Colors.grey.shade100, Colors.grey.shade200],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
-                            borderRadius: BorderRadius.circular(15),
-                            border: Border.all(
-                              color: isLatest
-                                  ? Colors.purple.withValues(alpha: 0.3)
-                                  : Colors.grey.shade400.withValues(alpha: 0.3),
-                              width: 1,
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.info_outline,
-                                size: 18,
-                                color: isLatest ? Colors.purple : Colors.grey.shade600,
+                // CONTENIDO EXPANDIBLE CON ANIMACIÓN
+                AnimatedCrossFade(
+                  firstChild: const SizedBox.shrink(),
+                  secondChild: Column(
+                    children: [
+                      const Divider(height: 1, thickness: 1, indent: 20, endIndent: 20),
+                      Padding(
+                        padding: const EdgeInsets.all(20),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // TÍTULO DE LA VERSIÓN DENTRO DE LA TARJETA EXPANDIDA (CON FONDO DE COLOR)
+                            Container(
+                              margin: const EdgeInsets.only(bottom: 20),
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: isLatest
+                                      ? [Colors.purple.shade50, Colors.blue.shade50]
+                                      : isDarkMode
+                                          ? [Colors.grey[800]!, Colors.grey[700]!]
+                                          : [Colors.grey[100]!, Colors.grey[200]!],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
+                                borderRadius: BorderRadius.circular(15),
+                                border: Border.all(
+                                  color: isLatest
+                                      ? Colors.purple.withValues(alpha: 0.3)
+                                      : Colors.grey.shade400.withValues(alpha: 0.3),
+                                  width: 1,
+                                ),
                               ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Text(
-                                  version.title,
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600,
-                                    color: isDarkMode 
-                                        ? (isLatest ? Colors.purple.shade200 : Colors.grey[300])
-                                        : (isLatest ? Colors.purple.shade700 : Colors.grey[800]),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(6),
+                                    decoration: BoxDecoration(
+                                      color: isLatest 
+                                          ? Colors.purple.withValues(alpha: 0.2)
+                                          : (isDarkMode ? Colors.grey[600]!.withValues(alpha: 0.3) : Colors.grey[400]!.withValues(alpha: 0.3)),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Icon(
+                                      Icons.info_outline,
+                                      size: 18,
+                                      color: isLatest ? Colors.purple : (isDarkMode ? Colors.grey[400] : Colors.grey[600]),
+                                    ),
                                   ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Text(
+                                      version.title,
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
+                                        color: isDarkMode 
+                                            ? (isLatest ? Colors.purple.shade200 : Colors.grey[300])
+                                            : (isLatest ? Colors.purple.shade700 : Colors.grey[800]),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            
+                            // Categorías de cambios
+                            ...version.changes.map((category) => 
+                              _buildCategorySection(category, isDarkMode, isLatest)
+                            ),
+                            
+                            // Versión inicial
+                            if (version.isInitial) ...[
+                              const SizedBox(height: 16),
+                              Container(
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    colors: isDarkMode
+                                        ? [Colors.green.shade900.withValues(alpha: 0.3), Colors.green.shade800.withValues(alpha: 0.2)]
+                                        : [Colors.green.shade50, Colors.green.shade100],
+                                  ),
+                                  borderRadius: BorderRadius.circular(15),
+                                  border: Border.all(
+                                    color: isDarkMode
+                                        ? Colors.green.shade800.withValues(alpha: 0.3)
+                                        : Colors.green.shade300.withValues(alpha: 0.5),
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(8),
+                                      decoration: BoxDecoration(
+                                        color: Colors.green.withValues(alpha: 0.2),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: const Icon(
+                                        Icons.emoji_events,
+                                        color: Colors.green,
+                                        size: 24,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    const Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            '¡El comienzo de todo!',
+                                            style: TextStyle(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.green,
+                                            ),
+                                          ),
+                                          SizedBox(height: 4),
+                                          Text(
+                                            'La primera versión de QuickNote 🚀',
+                                            style: TextStyle(
+                                              fontSize: 13,
+                                              color: Colors.green,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                             ],
-                          ),
+                          ],
                         ),
-                        
-                        // Categorías de cambios
-                        ...version.changes.map((category) => 
-                          _buildCategorySection(category, isDarkMode, isLatest)
-                        ),
-                        
-                        // Versión inicial
-                        if (version.isInitial) ...[
-                          const SizedBox(height: 16),
-                          Container(
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: isDarkMode
-                                    ? [Colors.green.shade900.withValues(alpha: 0.3), Colors.green.shade800.withValues(alpha: 0.2)]
-                                    : [Colors.green.shade50, Colors.green.shade100],
-                              ),
-                              borderRadius: BorderRadius.circular(15),
-                              border: Border.all(
-                                color: isDarkMode
-                                    ? Colors.green.shade800.withValues(alpha: 0.3)
-                                    : Colors.green.shade300.withValues(alpha: 0.5),
-                              ),
-                            ),
-                            child: Row(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.all(8),
-                                  decoration: BoxDecoration(
-                                    color: Colors.green.withValues(alpha: 0.2),
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: const Icon(
-                                    Icons.emoji_events,
-                                    color: Colors.green,
-                                    size: 24,
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                const Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        '¡El comienzo de todo!',
-                                        style: TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.green,
-                                        ),
-                                      ),
-                                      SizedBox(height: 4),
-                                      Text(
-                                        'La primera versión de QuickNote 🚀',
-                                        style: TextStyle(
-                                          fontSize: 13,
-                                          color: Colors.green,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
-                ],
+                  crossFadeState: isExpanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
+                  duration: const Duration(milliseconds: 400),
+                  firstCurve: Curves.easeIn,
+                  secondCurve: Curves.easeOut,
+                  sizeCurve: Curves.easeInOut,
+                ),
               ],
             ),
           ),
