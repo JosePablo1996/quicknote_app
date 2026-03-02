@@ -160,7 +160,7 @@ class _DeveloperProfileScreenState extends State<DeveloperProfileScreen> {
                       child: Stack(
                         children: [
                           // Patrón de fondo decorativo
-                          Positioned(
+                          const Positioned(
                             right: -20,
                             top: -20,
                             child: Opacity(
@@ -421,12 +421,12 @@ class _DeveloperProfileScreenState extends State<DeveloperProfileScreen> {
                             ),
                           ],
                         ),
-                        child: Row(
+                        child: const Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(Icons.verified, color: Colors.white, size: 20),
-                            const SizedBox(width: 8),
-                            const Text(
+                            Icon(Icons.verified, color: Colors.white, size: 20),
+                            SizedBox(width: 8),
+                            Text(
                               'Modo Desarrollador Activo',
                               style: TextStyle(
                                 color: Colors.white,

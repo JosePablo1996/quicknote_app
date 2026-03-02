@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'dart:ui';
 import '../models/note.dart';
+import '../models/tag.dart'; // 👈 IMPORTACIÓN AGREGADA
 import 'package:provider/provider.dart';
 import '../providers/theme_provider.dart';
+import 'tag_notes_screen.dart'; // 👈 IMPORTACIÓN AGREGADA
 
 class NoteDetailScreen extends StatelessWidget {
   final Note note;
@@ -33,6 +35,36 @@ class NoteDetailScreen extends StatelessWidget {
           ),
           onPressed: () => Navigator.pop(context),
         ),
+        // 👇 ACCIONES MEJORADAS: Indicadores de archivada y favorito
+        actions: [
+          if (note.isArchived)
+            Container(
+              margin: const EdgeInsets.only(right: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.teal.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.teal.withValues(alpha: 0.3)),
+              ),
+              child: Row(
+                children: const [
+                  Icon(Icons.archive, color: Colors.teal, size: 16),
+                  SizedBox(width: 4),
+                  Text('Archivada', style: TextStyle(color: Colors.teal, fontSize: 12)),
+                ],
+              ),
+            ),
+          if (note.isFavorite)
+            Container(
+              margin: const EdgeInsets.only(right: 8),
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: Colors.amber.withValues(alpha: 0.2),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.star, color: Colors.amber, size: 18),
+            ),
+        ],
         flexibleSpace: ClipRRect(
           child: BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
@@ -354,7 +386,7 @@ class NoteDetailScreen extends StatelessWidget {
                                   ),
                                 ),
                                 Text(
-                                  '${_formatDateTime(note.updatedAt!)}',
+                                  _formatDateTime(note.updatedAt!),
                                   style: TextStyle(
                                     fontSize: 13,
                                     fontWeight: FontWeight.w500,
@@ -469,36 +501,42 @@ class NoteDetailScreen extends StatelessWidget {
                           ),
                         ),
 
-                        // Metadatos adicionales
+                        // 👇 ETIQUETAS MEJORADAS con colores y navegación
                         if (note.tags.isNotEmpty) ...[
                           const SizedBox(height: 16),
                           Wrap(
                             spacing: 6,
                             runSpacing: 6,
                             children: note.tags.map((tag) {
-                              return Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 10,
-                                  vertical: 4,
-                                ),
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    colors: [
-                                      noteColor.withValues(alpha: 0.15),
-                                      noteColor.withValues(alpha: 0.05),
-                                    ],
+                              final tagColor = Tag.getColorForName(tag);
+                              return GestureDetector(
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => TagNotesScreen(tag: tag),
+                                    ),
+                                  );
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 4,
                                   ),
-                                  borderRadius: BorderRadius.circular(15),
-                                  border: Border.all(
-                                    color: noteColor.withValues(alpha: 0.2),
-                                    width: 1,
+                                  decoration: BoxDecoration(
+                                    color: tagColor.withValues(alpha: 0.15),
+                                    borderRadius: BorderRadius.circular(15),
+                                    border: Border.all(
+                                      color: tagColor.withValues(alpha: 0.3),
+                                    ),
                                   ),
-                                ),
-                                child: Text(
-                                  '#$tag',
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    color: noteColor,
+                                  child: Text(
+                                    '#$tag',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: tagColor,
+                                      fontWeight: FontWeight.w500,
+                                    ),
                                   ),
                                 ),
                               );

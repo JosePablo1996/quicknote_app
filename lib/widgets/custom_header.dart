@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'dart:ui';
 import 'package:provider/provider.dart';
 import '../providers/theme_provider.dart';
+import '../providers/note_provider.dart';
+import '../models/tag.dart';
 
 class CustomHeader extends StatelessWidget {
   final String selectedCategory;
@@ -42,11 +44,28 @@ class CustomHeader extends StatelessWidget {
     }
   }
 
+  // Obtener todas las etiquetas únicas de las notas
+  List<String> _getAllTags(BuildContext context) {
+    final noteProvider = Provider.of<NoteProvider>(context, listen: false);
+    final allTags = <String>{};
+    
+    for (var note in noteProvider.notes) {
+      if (!note.isDeleted) {
+        allTags.addAll(note.tags);
+      }
+    }
+    
+    final tagsList = allTags.toList()..sort();
+    return ['Todas', ...tagsList];
+  }
+
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final isDarkMode = themeProvider.isDarkMode;
     final greeting = _getGreeting();
+    final allTags = _getAllTags(context);
+    final hasTags = allTags.length > 1; // Más de "Todas"
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -91,7 +110,7 @@ class CustomHeader extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  // Botón izquierdo más pequeño
+                  // Botón izquierdo
                   GestureDetector(
                     onTap: onLeftMenuTap,
                     child: Container(
@@ -126,36 +145,68 @@ class CustomHeader extends StatelessWidget {
                     ),
                   ),
                   
-                  // Título centrado
-                  Row(
-                    children: [
-                      Container(
-                        width: 3,
-                        height: 24,
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [Colors.blue, Colors.purple],
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
+                  // Título con estilo mejorado
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: isDarkMode
+                            ? [
+                                Colors.blue.shade900.withValues(alpha: 0.3),
+                                Colors.purple.shade900.withValues(alpha: 0.3),
+                              ]
+                            : [
+                                Colors.blue.shade50.withValues(alpha: 0.8),
+                                Colors.purple.shade50.withValues(alpha: 0.8),
+                              ],
+                      ),
+                      borderRadius: BorderRadius.circular(15),
+                      border: Border.all(
+                        color: isDarkMode
+                            ? Colors.blue.shade700.withValues(alpha: 0.3)
+                            : Colors.blue.shade200.withValues(alpha: 0.5),
+                        width: 1,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 3,
+                          height: 24,
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [Colors.blue, Colors.purple],
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                            ),
+                            borderRadius: BorderRadius.circular(2),
                           ),
-                          borderRadius: BorderRadius.circular(2),
                         ),
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        'QuickNote',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          foreground: Paint()
-                            ..shader = LinearGradient(
-                              colors: isDarkMode
-                                  ? [Colors.blue.shade200, Colors.purple.shade200]
-                                  : [Colors.blue.shade700, Colors.purple.shade700],
-                            ).createShader(const Rect.fromLTWH(0, 0, 150, 50)),
+                        const SizedBox(width: 8),
+                        const Text(
+                          'QuickNote',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 1.2,
+                          ),
                         ),
-                      ),
-                    ],
+                        const SizedBox(width: 4),
+                        Container(
+                          width: 3,
+                          height: 24,
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [Colors.purple, Colors.blue],
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                            ),
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                   
                   // Botones derecho
@@ -165,7 +216,7 @@ class CustomHeader extends StatelessWidget {
                       _buildThemeToggle(themeProvider),
                       const SizedBox(width: 6),
                       
-                      // Botón derecho más pequeño
+                      // Botón derecho
                       GestureDetector(
                         onTap: onRightMenuTap,
                         child: Container(
@@ -206,7 +257,7 @@ class CustomHeader extends StatelessWidget {
               
               const SizedBox(height: 12),
               
-              // Mensaje de saludo centrado debajo del nombre
+              // Mensaje de saludo centrado
               Center(
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -242,32 +293,110 @@ class CustomHeader extends StatelessWidget {
               
               const SizedBox(height: 12),
               
-              // Chips de categorías con iconos
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  _buildCategoryChip(
-                    label: 'Todas',
-                    icon: Icons.view_list,
-                    isSelected: selectedCategory == 'Todas',
-                    isDarkMode: isDarkMode,
+              // Dropdown de etiquetas
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: isDarkMode
+                        ? [
+                            Colors.grey[800]!.withValues(alpha: 0.5),
+                            Colors.grey[700]!.withValues(alpha: 0.3),
+                          ]
+                        : [
+                            Colors.white.withValues(alpha: 0.7),
+                            Colors.grey[50]!.withValues(alpha: 0.5),
+                          ],
                   ),
-                  const SizedBox(width: 12),
-                  _buildCategoryChip(
-                    label: 'Personal',
-                    icon: Icons.person,
-                    isSelected: selectedCategory == 'Personal',
-                    isDarkMode: isDarkMode,
+                  borderRadius: BorderRadius.circular(25),
+                  border: Border.all(
+                    color: isDarkMode
+                        ? Colors.grey[600]!.withValues(alpha: 0.3)
+                        : Colors.blue.shade200.withValues(alpha: 0.3),
                   ),
-                  const SizedBox(width: 12),
-                  _buildCategoryChip(
-                    label: 'Trabajo',
-                    icon: Icons.work,
-                    isSelected: selectedCategory == 'Trabajo',
-                    isDarkMode: isDarkMode,
+                ),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    value: selectedCategory,
+                    isExpanded: true,
+                    icon: Icon(
+                      Icons.arrow_drop_down,
+                      color: isDarkMode ? Colors.blue.shade200 : Colors.blue.shade700,
+                    ),
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: isDarkMode ? Colors.grey[300] : Colors.grey[800],
+                    ),
+                    dropdownColor: isDarkMode ? Colors.grey[850] : Colors.white,
+                    borderRadius: BorderRadius.circular(15),
+                    items: allTags.map((tag) {
+                      final tagColor = tag != 'Todas' 
+                          ? Tag.getColorForName(tag)
+                          : (isDarkMode ? Colors.blue.shade200 : Colors.blue.shade700);
+                      
+                      return DropdownMenuItem<String>(
+                        value: tag,
+                        child: Row(
+                          children: [
+                            if (tag != 'Todas') ...[
+                              Container(
+                                width: 8,
+                                height: 8,
+                                decoration: BoxDecoration(
+                                  color: tagColor,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                            ],
+                            Icon(
+                              tag == 'Todas' ? Icons.view_list : Icons.label,
+                              size: 16,
+                              color: tagColor,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                tag,
+                                style: TextStyle(
+                                  color: tag != 'Todas'
+                                      ? tagColor
+                                      : (isDarkMode ? Colors.grey[300] : Colors.grey[800]),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                    onChanged: (value) {
+                      if (value != null) {
+                        onCategorySelected(value);
+                      }
+                    },
                   ),
-                ],
+                ),
               ),
+              
+              // Mensaje si no hay etiquetas
+              if (!hasTags) ...[
+                const SizedBox(height: 8),
+                Center(
+                  child: Text(
+                    'No hay etiquetas disponibles',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: isDarkMode ? Colors.grey[500] : Colors.grey[600],
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ),
+              ],
             ],
           ),
         ),
@@ -334,87 +463,6 @@ class CustomHeader extends StatelessWidget {
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCategoryChip({
-    required String label,
-    required IconData icon,
-    required bool isSelected,
-    required bool isDarkMode,
-  }) {
-    return GestureDetector(
-      onTap: () => onCategorySelected(label),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        curve: Curves.easeInOut,
-        padding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 8,
-        ),
-        decoration: BoxDecoration(
-          gradient: isSelected
-              ? LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    Colors.blue.shade400,
-                    Colors.blue.shade600,
-                  ],
-                )
-              : LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: isDarkMode
-                      ? [
-                          Colors.grey[800]!.withValues(alpha: 0.5),
-                          Colors.grey[700]!.withValues(alpha: 0.3),
-                        ]
-                      : [
-                          Colors.white.withValues(alpha: 0.7),
-                          Colors.grey[50]!.withValues(alpha: 0.5),
-                        ],
-                ),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: isSelected
-                ? Colors.white.withValues(alpha: 0.5)
-                : (isDarkMode 
-                    ? Colors.grey[600]!.withValues(alpha: 0.3)
-                    : Colors.blue.shade200.withValues(alpha: 0.3)),
-            width: isSelected ? 1.2 : 1,
-          ),
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(20),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 3, sigmaY: 3),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  icon,
-                  size: 14,
-                  color: isSelected
-                      ? Colors.white
-                      : (isDarkMode ? Colors.grey[400] : Colors.grey[600]),
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  label,
-                  style: TextStyle(
-                    color: isSelected
-                        ? Colors.white
-                        : (isDarkMode ? Colors.grey[300] : Colors.grey[700]),
-                    fontSize: 13,
-                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                  ),
-                ),
-              ],
-            ),
-          ),
         ),
       ),
     );

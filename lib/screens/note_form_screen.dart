@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'dart:ui';
 import 'package:provider/provider.dart';
 import '../models/note.dart';
+import '../models/tag.dart';
 import '../services/api_service.dart';
 import '../utils/snackbar_utils.dart';
 import '../providers/theme_provider.dart';
 import '../providers/note_provider.dart';
+import 'archived_screen.dart';
 
 class NoteFormScreen extends StatefulWidget {
   final Note? note;
@@ -21,16 +23,14 @@ class _NoteFormScreenState extends State<NoteFormScreen>
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _titleController;
   late TextEditingController _contentController;
-  final ApiService _apiService = ApiService();
   bool _isLoading = false;
-  bool _isPinned = false;
   bool _isFavorite = false;
-  bool _isLocked = false;
+  bool _isArchived = false;
   List<String> _tags = [];
   
   // Colores disponibles
   Color _selectedColor = Colors.blue;
-  final List<Color> _colorOptions = [
+  final List<Color> _colorOptions = const [
     Colors.blue,
     Colors.red,
     Colors.green,
@@ -42,7 +42,6 @@ class _NoteFormScreenState extends State<NoteFormScreen>
   ];
   
   late AnimationController _glassAnimationController;
-  late Animation<double> _glassAnimation;
 
   @override
   void initState() {
@@ -52,20 +51,23 @@ class _NoteFormScreenState extends State<NoteFormScreen>
     
     if (widget.note != null) {
       _isFavorite = widget.note?.isFavorite ?? false;
+      _isArchived = widget.note?.isArchived ?? false;
       _tags = widget.note?.tags ?? [];
+      
+      // Cargar color de la nota si existe
+      if (widget.note?.colorHex != null && widget.note!.colorHex!.isNotEmpty) {
+        try {
+          _selectedColor = Color(int.parse(widget.note!.colorHex!.replaceFirst('#', '0xff')));
+        } catch (e) {
+          // Si hay error, usar color por defecto
+        }
+      }
     }
     
     _glassAnimationController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 2000),
     )..repeat(reverse: true);
-    
-    _glassAnimation = Tween<double>(begin: 0.1, end: 0.3).animate(
-      CurvedAnimation(
-        parent: _glassAnimationController,
-        curve: Curves.easeInOut,
-      ),
-    );
   }
 
   @override
@@ -76,6 +78,15 @@ class _NoteFormScreenState extends State<NoteFormScreen>
     super.dispose();
   }
 
+  // Función para limpiar y validar tags
+  List<String> _getCleanTags() {
+    return _tags
+        .map((tag) => tag.trim().toLowerCase())
+        .where((tag) => tag.isNotEmpty)
+        .toSet() // Eliminar duplicados
+        .toList();
+  }
+
   Future<void> _saveNote() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -84,7 +95,11 @@ class _NoteFormScreenState extends State<NoteFormScreen>
     try {
       final noteProvider = Provider.of<NoteProvider>(context, listen: false);
       
+      final cleanTags = _getCleanTags();
+      debugPrint('🎯 Tags a guardar: $cleanTags');
+      
       if (widget.note == null) {
+        // Crear nueva nota
         final newNote = Note(
           id: 0,
           title: _titleController.text.trim(),
@@ -92,7 +107,8 @@ class _NoteFormScreenState extends State<NoteFormScreen>
           createdAt: DateTime.now().toIso8601String(),
           updatedAt: null,
           isFavorite: _isFavorite,
-          tags: _tags,
+          isArchived: _isArchived,
+          tags: cleanTags,
           colorHex: _colorToHex(_selectedColor),
         );
         await noteProvider.createNote(newNote);
@@ -103,6 +119,7 @@ class _NoteFormScreenState extends State<NoteFormScreen>
           );
         }
       } else {
+        // Actualizar nota existente
         final updatedNote = Note(
           id: widget.note!.id,
           title: _titleController.text.trim(),
@@ -110,7 +127,8 @@ class _NoteFormScreenState extends State<NoteFormScreen>
           createdAt: widget.note!.createdAt,
           updatedAt: DateTime.now().toIso8601String(),
           isFavorite: _isFavorite,
-          tags: _tags,
+          isArchived: _isArchived,
+          tags: cleanTags,
           colorHex: _colorToHex(_selectedColor),
         );
         await noteProvider.updateNote(updatedNote);
@@ -128,7 +146,7 @@ class _NoteFormScreenState extends State<NoteFormScreen>
       if (mounted) {
         SnackbarUtils.showErrorSnackbar(
           context, 
-          'Error al guardar: $e',
+          'Error al guardar: ${e.toString()}',
         );
       }
     } finally {
@@ -149,7 +167,7 @@ class _NoteFormScreenState extends State<NoteFormScreen>
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
       builder: (context) => Container(
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           color: Colors.transparent,
         ),
         child: ClipRRect(
@@ -234,7 +252,7 @@ class _NoteFormScreenState extends State<NoteFormScreen>
                   
                   const SizedBox(height: 8),
                   
-                  // Añadir etiquetas (funcional)
+                  // Añadir etiquetas
                   _buildModernMenuItem(
                     context,
                     icon: Icons.label,
@@ -247,20 +265,7 @@ class _NoteFormScreenState extends State<NoteFormScreen>
                     },
                   ),
                   
-                  // Compartir como (renombrado)
-                  _buildModernMenuItem(
-                    context,
-                    icon: Icons.share,
-                    title: 'Compartir como',
-                    color: Colors.green,
-                    isDarkMode: isDarkMode,
-                    onTap: () {
-                      Navigator.pop(context);
-                      _showShareDialog();
-                    },
-                  ),
-                  
-                  // Añadir a favoritos (funcional)
+                  // Añadir a favoritos
                   _buildModernMenuItem(
                     context,
                     icon: _isFavorite ? Icons.star : Icons.star_border,
@@ -270,26 +275,21 @@ class _NoteFormScreenState extends State<NoteFormScreen>
                     onTap: () {
                       setState(() => _isFavorite = !_isFavorite);
                       Navigator.pop(context);
-                      SnackbarUtils.showSuccessSnackbar(
-                        context,
-                        _isFavorite ? 'Añadida a favoritos' : 'Eliminada de favoritos',
-                      );
+                      _showFavoriteNotification();
                     },
                   ),
                   
-                  // Archivar (funcional)
+                  // Archivar/Desarchivar
                   _buildModernMenuItem(
                     context,
-                    icon: Icons.archive,
-                    title: 'Archivar',
+                    icon: _isArchived ? Icons.unarchive : Icons.archive,
+                    title: _isArchived ? 'Desarchivar nota' : 'Archivar nota',
                     color: Colors.teal,
                     isDarkMode: isDarkMode,
                     onTap: () {
+                      setState(() => _isArchived = !_isArchived);
                       Navigator.pop(context);
-                      SnackbarUtils.showInfoSnackbar(
-                        context, 
-                        'Nota archivada',
-                      );
+                      _showArchiveNotification();
                     },
                   ),
                   
@@ -298,10 +298,9 @@ class _NoteFormScreenState extends State<NoteFormScreen>
                     thickness: 1,
                     indent: 20,
                     endIndent: 20,
-                    color: Colors.grey,
                   ),
                   
-                  // Eliminar (funcional)
+                  // Eliminar
                   _buildModernMenuItem(
                     context,
                     icon: Icons.delete,
@@ -323,6 +322,59 @@ class _NoteFormScreenState extends State<NoteFormScreen>
         ),
       ),
     );
+  }
+
+  void _showFavoriteNotification() {
+    if (_isFavorite) {
+      SnackbarUtils.showSuccessSnackbar(
+        context,
+        '✨ Nota añadida a favoritos',
+      );
+    } else {
+      SnackbarUtils.showInfoSnackbar(
+        context,
+        'Nota quitada de favoritos',
+      );
+    }
+  }
+
+  void _showArchiveNotification() {
+    if (_isArchived) {
+      SnackbarUtils.showSuccessSnackbar(
+        context,
+        '📦 Nota archivada',
+      );
+      
+      // Opción para ir a la pantalla de archivadas
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('La nota se ha archivado'),
+          duration: const Duration(seconds: 3),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+          margin: const EdgeInsets.all(10),
+          action: SnackBarAction(
+            label: 'VER',
+            textColor: Colors.white,
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const ArchivedScreen(),
+                ),
+              );
+            },
+          ),
+        ),
+      );
+    } else {
+      SnackbarUtils.showInfoSnackbar(
+        context,
+        'Nota restaurada',
+      );
+    }
   }
 
   Widget _buildModernMenuItem(
@@ -424,230 +476,207 @@ class _NoteFormScreenState extends State<NoteFormScreen>
     );
   }
 
-  void _showShareDialog() {
-    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
-    final isDarkMode = themeProvider.isDarkMode;
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(
-          'Compartir como',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: isDarkMode ? Colors.grey[300] : Colors.black87,
-          ),
-        ),
-        backgroundColor: isDarkMode ? Colors.grey[900] : Colors.white,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(25),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _buildShareOption(
-              context,
-              icon: Icons.image,
-              label: 'Imagen',
-              color: Colors.purple,
-              isDarkMode: isDarkMode,
-              onTap: () {
-                Navigator.pop(context);
-                SnackbarUtils.showInfoSnackbar(
-                  context, 
-                  'Compartir como imagen - Próximamente',
-                );
-              },
-            ),
-            _buildShareOption(
-              context,
-              icon: Icons.picture_as_pdf,
-              label: 'PDF',
-              color: Colors.red,
-              isDarkMode: isDarkMode,
-              onTap: () {
-                Navigator.pop(context);
-                SnackbarUtils.showInfoSnackbar(
-                  context, 
-                  'Compartir como PDF - Próximamente',
-                );
-              },
-            ),
-            _buildShareOption(
-              context,
-              icon: Icons.text_fields,
-              label: 'Solo texto',
-              color: Colors.blue,
-              isDarkMode: isDarkMode,
-              onTap: () {
-                Navigator.pop(context);
-                SnackbarUtils.showInfoSnackbar(
-                  context, 
-                  'Compartir como texto - Próximamente',
-                );
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildShareOption(
-    BuildContext context, {
-    required IconData icon,
-    required String label,
-    required Color color,
-    required bool isDarkMode,
-    required VoidCallback onTap,
-  }) {
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 4),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        color: isDarkMode ? Colors.grey[800] : Colors.grey[50],
-      ),
-      child: ListTile(
-        leading: Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Icon(icon, color: color),
-        ),
-        title: Text(
-          label,
-          style: TextStyle(
-            fontWeight: FontWeight.w500,
-            color: isDarkMode ? Colors.grey[300] : Colors.black87,
-          ),
-        ),
-        trailing: Icon(
-          Icons.arrow_forward_ios, 
-          color: isDarkMode ? Colors.grey[500] : Colors.grey[400], 
-          size: 14,
-        ),
-        onTap: onTap,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-      ),
-    );
-  }
-
+  // Diálogo de etiquetas CORREGIDO
   void _showTagsDialog() {
     final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
     final isDarkMode = themeProvider.isDarkMode;
 
     final tagController = TextEditingController();
+    
+    // Obtener etiquetas existentes
+    final noteProvider = Provider.of<NoteProvider>(context, listen: false);
+    final allTags = <String>{};
+    for (var note in noteProvider.notes) {
+      allTags.addAll(note.tags);
+    }
+    final existingTags = allTags.toList()..sort();
+
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(
-          'Añadir etiquetas',
-          style: TextStyle(
-            color: isDarkMode ? Colors.grey[300] : Colors.black87,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: Text(
+            'Añadir etiquetas',
+            style: TextStyle(
+              color: isDarkMode ? Colors.grey[300] : Colors.black87,
+            ),
           ),
-        ),
-        backgroundColor: isDarkMode ? Colors.grey[900] : Colors.white,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(25),
-        ),
-        content: StatefulBuilder(
-          builder: (context, setState) {
-            return Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: tagController,
-                  style: TextStyle(
-                    color: isDarkMode ? Colors.grey[300] : Colors.black87,
-                  ),
-                  decoration: InputDecoration(
-                    hintText: 'Nombre de la etiqueta',
-                    hintStyle: TextStyle(
-                      color: isDarkMode ? Colors.grey[500] : Colors.grey[600],
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(
-                        color: isDarkMode ? Colors.grey[700]! : Colors.grey[300]!,
-                      ),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(
-                        color: isDarkMode ? Colors.grey[700]! : Colors.grey[300]!,
-                      ),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(
-                        color: _selectedColor,
-                        width: 2,
-                      ),
-                    ),
-                    prefixIcon: Icon(Icons.label, color: _selectedColor),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                if (_tags.isNotEmpty)
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: _tags.map((tag) => Chip(
-                      label: Text(
-                        tag,
+          backgroundColor: isDarkMode ? Colors.grey[900] : Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(25),
+          ),
+          content: StatefulBuilder(
+            builder: (context, setDialogState) {
+              return SizedBox(
+                width: double.maxFinite,
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Campo de texto para nueva etiqueta
+                      TextField(
+                        controller: tagController,
                         style: TextStyle(
                           color: isDarkMode ? Colors.grey[300] : Colors.black87,
                         ),
+                        decoration: InputDecoration(
+                          hintText: 'Nombre de la etiqueta',
+                          hintStyle: TextStyle(
+                            color: isDarkMode ? Colors.grey[500] : Colors.grey[600],
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          prefixIcon: Icon(Icons.label, color: _selectedColor),
+                          suffixIcon: IconButton(
+                            icon: const Icon(Icons.add),
+                            onPressed: () {
+                              if (tagController.text.isNotEmpty) {
+                                final newTag = tagController.text.trim().toLowerCase();
+                                if (newTag.isNotEmpty && !_tags.contains(newTag)) {
+                                  setDialogState(() {
+                                    _tags.add(newTag);
+                                  });
+                                  // Actualizar el formulario principal después
+                                  Future.microtask(() {
+                                    if (mounted) setState(() {});
+                                  });
+                                }
+                                tagController.clear();
+                              }
+                            },
+                          ),
+                        ),
+                        onSubmitted: (value) {
+                          if (value.isNotEmpty) {
+                            final newTag = value.trim().toLowerCase();
+                            if (newTag.isNotEmpty && !_tags.contains(newTag)) {
+                              setDialogState(() {
+                                _tags.add(newTag);
+                              });
+                              Future.microtask(() {
+                                if (mounted) setState(() {});
+                              });
+                            }
+                            tagController.clear();
+                          }
+                        },
                       ),
-                      backgroundColor: _selectedColor.withValues(alpha: 0.1),
-                      deleteIconColor: _selectedColor,
-                      onDeleted: () {
-                        setState(() {
-                          this.setState(() {
-                            _tags.remove(tag);
-                          });
-                        });
-                      },
-                    )).toList(),
+                      
+                      const SizedBox(height: 16),
+                      
+                      // Sugerencias de etiquetas existentes
+                      if (existingTags.isNotEmpty) ...[
+                        Text(
+                          'Etiquetas existentes:',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: existingTags.map((tag) {
+                            final tagColor = Tag.getColorForName(tag);
+                            return GestureDetector(
+                              onTap: () {
+                                if (!_tags.contains(tag)) {
+                                  setDialogState(() {
+                                    _tags.add(tag);
+                                  });
+                                  Future.microtask(() {
+                                    if (mounted) setState(() {});
+                                  });
+                                }
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: tagColor.withValues(alpha: 0.15),
+                                  borderRadius: BorderRadius.circular(15),
+                                  border: Border.all(
+                                    color: tagColor.withValues(alpha: 0.3),
+                                  ),
+                                ),
+                                child: Text(
+                                  '#$tag',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: tagColor,
+                                  ),
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                        const SizedBox(height: 8),
+                      ],
+                      
+                      // Etiquetas seleccionadas
+                      if (_tags.isNotEmpty) ...[
+                        const Divider(),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Etiquetas seleccionadas:',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: _tags.map((tag) {
+                            final tagColor = Tag.getColorForName(tag);
+                            return Chip(
+                              label: Text(
+                                tag,
+                                style: TextStyle(
+                                  color: isDarkMode ? Colors.grey[300] : Colors.black87,
+                                ),
+                              ),
+                              backgroundColor: tagColor.withValues(alpha: 0.1),
+                              deleteIconColor: tagColor,
+                              onDeleted: () {
+                                setDialogState(() {
+                                  _tags.remove(tag);
+                                });
+                                Future.microtask(() {
+                                  if (mounted) setState(() {});
+                                });
+                              },
+                            );
+                          }).toList(),
+                        ),
+                      ],
+                    ],
                   ),
-              ],
-            );
-          },
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(
-              'Cancelar',
-              style: TextStyle(
-                color: isDarkMode ? Colors.grey[400] : Colors.grey[700],
-              ),
-            ),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              if (tagController.text.isNotEmpty) {
-                setState(() {
-                  _tags.add(tagController.text);
-                });
-                tagController.clear();
-              }
+                ),
+              );
             },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: _selectedColor,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: Text(
+                'Cerrar',
+                style: TextStyle(
+                  color: isDarkMode ? Colors.grey[400] : Colors.grey[700],
+                ),
               ),
             ),
-            child: const Text('Añadir'),
-          ),
-        ],
-      ),
+          ],
+        );
+      },
     );
   }
 
@@ -704,7 +733,7 @@ class _NoteFormScreenState extends State<NoteFormScreen>
       ),
     );
 
-    if (confirm == true) {
+    if (confirm == true && mounted) {
       try {
         final noteProvider = Provider.of<NoteProvider>(context, listen: false);
         await noteProvider.deleteNote(widget.note!.id);
@@ -759,6 +788,35 @@ class _NoteFormScreenState extends State<NoteFormScreen>
           onPressed: () => Navigator.pop(context),
         ),
         actions: [
+          // Indicadores de estado
+          if (_isFavorite)
+            Container(
+              margin: const EdgeInsets.only(right: 4),
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.amber.withValues(alpha: 0.2),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.star,
+                color: Colors.amber,
+                size: 18,
+              ),
+            ),
+          if (_isArchived)
+            Container(
+              margin: const EdgeInsets.only(right: 4),
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.teal.withValues(alpha: 0.2),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.archive,
+                color: Colors.teal,
+                size: 18,
+              ),
+            ),
           Container(
             margin: const EdgeInsets.only(right: 8),
             decoration: BoxDecoration(
@@ -989,50 +1047,53 @@ class _NoteFormScreenState extends State<NoteFormScreen>
                         child: Wrap(
                           spacing: 8,
                           runSpacing: 8,
-                          children: _tags.map((tag) => Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: [
-                                  _selectedColor.withValues(alpha: 0.15),
-                                  _selectedColor.withValues(alpha: 0.05),
+                          children: _tags.map((tag) {
+                            final tagColor = Tag.getColorForName(tag);
+                            return Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [
+                                    tagColor.withValues(alpha: 0.15),
+                                    tagColor.withValues(alpha: 0.05),
+                                  ],
+                                ),
+                                borderRadius: BorderRadius.circular(15),
+                                border: Border.all(
+                                  color: tagColor.withValues(alpha: 0.2),
+                                  width: 1,
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    '#$tag',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: tagColor,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  GestureDetector(
+                                    onTap: () {
+                                      setState(() {
+                                        _tags.remove(tag);
+                                      });
+                                    },
+                                    child: Icon(
+                                      Icons.close,
+                                      size: 14,
+                                      color: tagColor.withValues(alpha: 0.7),
+                                    ),
+                                  ),
                                 ],
                               ),
-                              borderRadius: BorderRadius.circular(15),
-                              border: Border.all(
-                                color: _selectedColor.withValues(alpha: 0.2),
-                                width: 1,
-                              ),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  '#$tag',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: _selectedColor,
-                                  ),
-                                ),
-                                const SizedBox(width: 4),
-                                GestureDetector(
-                                  onTap: () {
-                                    setState(() {
-                                      _tags.remove(tag);
-                                    });
-                                  },
-                                  child: Icon(
-                                    Icons.close,
-                                    size: 14,
-                                    color: _selectedColor.withValues(alpha: 0.7),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          )).toList(),
+                            );
+                          }).toList(),
                         ),
                       ),
                     ],
@@ -1078,9 +1139,8 @@ class _NoteFormScreenState extends State<NoteFormScreen>
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       // Paleta de colores
-                      Container(
+                      SizedBox(
                         height: 50,
-                        padding: const EdgeInsets.symmetric(horizontal: 8),
                         child: ListView.builder(
                           scrollDirection: Axis.horizontal,
                           itemCount: _colorOptions.length,
@@ -1145,27 +1205,24 @@ class _NoteFormScreenState extends State<NoteFormScreen>
                             isDarkMode: isDarkMode,
                             onTap: () {
                               setState(() => _isFavorite = !_isFavorite);
-                              SnackbarUtils.showInfoSnackbar(
-                                context,
-                                _isFavorite ? 'Añadida a favoritos' : 'Quitada de favoritos',
-                              );
+                              _showFavoriteNotification();
                             },
                           ),
                           _buildActionButton(
                             icon: Icons.label,
                             label: 'Etiquetas',
+                            isActive: _tags.isNotEmpty,
                             isDarkMode: isDarkMode,
                             onTap: _showTagsDialog,
                           ),
                           _buildActionButton(
-                            icon: Icons.archive,
-                            label: 'Archivar',
+                            icon: _isArchived ? Icons.unarchive : Icons.archive,
+                            label: _isArchived ? 'Desarchivar' : 'Archivar',
+                            isActive: _isArchived,
                             isDarkMode: isDarkMode,
                             onTap: () {
-                              SnackbarUtils.showInfoSnackbar(
-                                context,
-                                'Nota archivada',
-                              );
+                              setState(() => _isArchived = !_isArchived);
+                              _showArchiveNotification();
                             },
                           ),
                           _buildActionButton(

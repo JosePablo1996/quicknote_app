@@ -281,7 +281,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   icon: Icons.info,
                   iconColor: Colors.lightBlue,
                   title: 'Versión',
-                  subtitle: 'QuickNote v2.2.0', // 👈 ACTUALIZADO A 2.2.0
+                  subtitle: 'QuickNote v2.3.0', // 👈 ACTUALIZADO A 2.3.0
                   isDarkMode: isDarkMode,
                   showArrow: false,
                 ),

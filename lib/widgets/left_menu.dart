@@ -5,7 +5,10 @@ import '../screens/calendar_screen.dart';
 import '../screens/settings_screen.dart';
 import '../screens/backup_screen.dart';
 import '../screens/trash_screen.dart';
-import '../screens/help_screen.dart'; // 👈 IMPORTAMOS LA PANTALLA DE AYUDA
+import '../screens/help_screen.dart';
+import '../screens/favorites_screen.dart';
+import '../screens/archived_screen.dart';
+import '../screens/tags_screen.dart'; // 👈 IMPORTAMOS LA PANTALLA DE ETIQUETAS
 import '../providers/theme_provider.dart';
 import '../utils/snackbar_utils.dart';
 
@@ -138,7 +141,7 @@ class _LeftMenuState extends State<LeftMenu>
                 child: SafeArea(
                   child: Column(
                     children: [
-                      // HEADER MEJORADO CON AVATAR EN ESQUINA INFERIOR IZQUIERDA
+                      // HEADER MEJORADO CON AVATAR
                       Container(
                         height: 180,
                         margin: const EdgeInsets.all(16),
@@ -230,7 +233,7 @@ class _LeftMenuState extends State<LeftMenu>
                                       ),
                                     ),
                                     child: const Text(
-                                      'v 2.2.0', // 👈 ACTUALIZAMOS A VERSIÓN 2.2.0
+                                      'v 2.3.0',
                                       style: TextStyle(
                                         fontSize: 12,
                                         fontWeight: FontWeight.w600,
@@ -285,11 +288,12 @@ class _LeftMenuState extends State<LeftMenu>
 
                       const SizedBox(height: 30),
 
-                      // CONTENIDO DEL MENÚ
+                      // ===== CONTENIDO DEL MENÚ =====
                       Expanded(
                         child: ListView(
                           padding: const EdgeInsets.symmetric(vertical: 8),
                           children: [
+                            // Calendario
                             _buildMenuSection(
                               title: 'Calendario',
                               items: [
@@ -303,6 +307,7 @@ class _LeftMenuState extends State<LeftMenu>
                               isDarkMode: isDarkMode,
                             ),
 
+                            // FAVORITOS - Funcional
                             _buildMenuSection(
                               title: 'Favoritos',
                               items: [
@@ -310,12 +315,13 @@ class _LeftMenuState extends State<LeftMenu>
                                   label: 'Notas favoritas',
                                   icon: Icons.star,
                                   color: Colors.amber.shade400,
-                                  onTap: () => _showComingSoon('Favoritos'),
+                                  onTap: () => _navigateToScreen(const FavoritesScreen()),
                                 ),
                               ],
                               isDarkMode: isDarkMode,
                             ),
 
+                            // ETIQUETAS - AHORA FUNCIONAL
                             _buildMenuSection(
                               title: 'Etiquetas',
                               items: [
@@ -323,12 +329,13 @@ class _LeftMenuState extends State<LeftMenu>
                                   label: 'Todas las etiquetas',
                                   icon: Icons.label,
                                   color: Colors.purple.shade400,
-                                  onTap: () => _showComingSoon('Etiquetas'),
+                                  onTap: () => _navigateToScreen(const TagsScreen()),
                                 ),
                               ],
                               isDarkMode: isDarkMode,
                             ),
 
+                            // ARCHIVAR - Funcional
                             _buildMenuSection(
                               title: 'Archivar',
                               items: [
@@ -336,12 +343,13 @@ class _LeftMenuState extends State<LeftMenu>
                                   label: 'Notas archivadas',
                                   icon: Icons.archive,
                                   color: Colors.teal.shade400,
-                                  onTap: () => _showComingSoon('Archivadas'),
+                                  onTap: () => _navigateToScreen(const ArchivedScreen()),
                                 ),
                               ],
                               isDarkMode: isDarkMode,
                             ),
 
+                            // PAPELERA - Funcional
                             _buildMenuSection(
                               title: 'Papelera',
                               items: [
@@ -355,6 +363,7 @@ class _LeftMenuState extends State<LeftMenu>
                               isDarkMode: isDarkMode,
                             ),
 
+                            // Sincronizar y respaldar
                             _buildMenuSection(
                               title: 'Sincronizar y respaldar',
                               items: [
@@ -368,6 +377,7 @@ class _LeftMenuState extends State<LeftMenu>
                               isDarkMode: isDarkMode,
                             ),
 
+                            // Centro de ayuda
                             _buildMenuSection(
                               title: 'Centro de ayuda',
                               items: [
@@ -375,12 +385,13 @@ class _LeftMenuState extends State<LeftMenu>
                                   label: 'Ayuda y soporte',
                                   icon: Icons.help,
                                   color: Colors.indigo.shade400,
-                                  onTap: () => _navigateToScreen(const HelpScreen()), // 👈 AHORA FUNCIONAL
+                                  onTap: () => _navigateToScreen(const HelpScreen()),
                                 ),
                               ],
                               isDarkMode: isDarkMode,
                             ),
 
+                            // Ajustes
                             _buildMenuSection(
                               title: 'Ajustes',
                               items: [

@@ -342,7 +342,7 @@ class _AuthMethodSelectorState extends State<AuthMethodSelector> {
           Container(
             width: 250,
             height: 250,
-            decoration: BoxDecoration(
+            decoration: const BoxDecoration(
               color: Colors.transparent,
             ),
             child: GridView.builder(

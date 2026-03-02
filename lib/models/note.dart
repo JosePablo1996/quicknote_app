@@ -1,13 +1,16 @@
+// lib/models/note.dart
+
 class Note {
   final int id;
   final String title;
   final String content;
   final String createdAt;
   final String? updatedAt;
-  final String? deletedAt; // NUEVO: Para la papelera
+  final String? deletedAt;
   
   // Campos adicionales para mejorar la UI/UX
   bool isFavorite;      // Para marcar notas como favoritas
+  bool isArchived;      // 👈 NUEVO CAMPO - Para notas archivadas (SOLO UNA VEZ)
   List<String> tags;    // Para categorizar notas
   String? colorHex;     // Para color personalizado (opcional)
 
@@ -17,48 +20,58 @@ class Note {
     required this.content,
     required this.createdAt,
     this.updatedAt,
-    this.deletedAt,     // NUEVO: Campo opcional
-    this.isFavorite = false,      // Por defecto no es favorito
-    this.tags = const [],         // Por defecto sin tags
+    this.deletedAt,
+    this.isFavorite = false,
+    this.isArchived = false,      // 👈 NUEVO CAMPO - Por defecto no archivada
+    this.tags = const [],
     this.colorHex,
   });
 
   // Crear desde JSON (para respuestas GET)
   factory Note.fromJson(Map<String, dynamic> json) {
     return Note(
-      id: json['id'],
-      title: json['title'],
-      content: json['content'],
-      createdAt: json['created_at'],
-      updatedAt: json['updated_at'],
-      deletedAt: json['deleted_at'], // NUEVO: Leer de JSON
-      // Valores por defecto si no vienen del backend
-      isFavorite: json['is_favorite'] ?? false,
-      tags: json['tags'] != null 
-          ? List<String>.from(json['tags']) 
-          : [],
-      colorHex: json['color_hex'],
+      id: json['id'] ?? 0,
+      title: json['title'] ?? '',
+      content: json['content'] ?? '',
+      createdAt: json['createdAt'] ?? json['created_at'] ?? DateTime.now().toIso8601String(),
+      updatedAt: json['updatedAt'] ?? json['updated_at'],
+      deletedAt: json['deletedAt'] ?? json['deleted_at'],
+      isFavorite: json['isFavorite'] ?? json['is_favorite'] ?? false,
+      isArchived: json['isArchived'] ?? json['is_archived'] ?? false, // 👈 NUEVO CAMPO
+      tags: json['tags'] != null ? List<String>.from(json['tags']) : [],
+      colorHex: json['colorHex'] ?? json['color_hex'],
     );
   }
 
   // Convertir a JSON (para POST/PUT)
   Map<String, dynamic> toJson() {
-    return {
+    final Map<String, dynamic> data = {
       'title': title,
       'content': content,
-      // Solo enviamos al backend lo que necesita
     };
+    
+    // Incluir isFavorite solo si es necesario para el backend
+    data['isFavorite'] = isFavorite;
+    data['isArchived'] = isArchived; // 👈 NUEVO CAMPO
+    
+    // Incluir tags si existen
+    if (tags.isNotEmpty) {
+      data['tags'] = tags;
+    }
+    
+    return data;
   }
 
-  // NUEVO: Método copyWith genérico para crear copias modificadas
+  // Método copyWith para crear copias modificadas
   Note copyWith({
     int? id,
     String? title,
     String? content,
     String? createdAt,
     String? updatedAt,
-    String? deletedAt, // NUEVO: Parámetro para papelera
+    String? deletedAt,
     bool? isFavorite,
+    bool? isArchived,  // 👈 NUEVO CAMPO
     List<String>? tags,
     String? colorHex,
   }) {
@@ -68,8 +81,9 @@ class Note {
       content: content ?? this.content,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
-      deletedAt: deletedAt ?? this.deletedAt, // NUEVO: Campo
+      deletedAt: deletedAt ?? this.deletedAt,
       isFavorite: isFavorite ?? this.isFavorite,
+      isArchived: isArchived ?? this.isArchived,  // 👈 NUEVO CAMPO
       tags: tags ?? this.tags,
       colorHex: colorHex ?? this.colorHex,
     );
@@ -95,7 +109,7 @@ class Note {
   /// Obtener hora de creación (HH:MM)
   String get createdTime {
     if (createdAt.length >= 16) {
-      return createdAt.substring(11, 16); // HH:MM
+      return createdAt.substring(11, 16);
     }
     return '';
   }
@@ -105,6 +119,8 @@ class Note {
 
   /// Saber si la nota está eliminada (en papelera)
   bool get isDeleted => deletedAt != null;
+
+  // 👈 ELIMINADO: Getter redundante 'isArchived' (ya existe como campo)
 
   /// Obtener extracto del contenido para vista previa
   String get excerpt {
@@ -137,6 +153,11 @@ class Note {
   /// Marcar como favorito (retorna nueva instancia usando copyWith)
   Note copyWithFavorite(bool value) {
     return copyWith(isFavorite: value);
+  }
+
+  /// Marcar como archivado (retorna nueva instancia usando copyWith)
+  Note copyWithArchived(bool value) {
+    return copyWith(isArchived: value);
   }
 
   /// Agregar un tag (retorna nueva instancia usando copyWith)
@@ -173,10 +194,17 @@ class Note {
 
   // Método privado para formatear fechas
   String _formatDate(String date) {
-    if (date.length >= 10) {
-      final parts = date.substring(0, 10).split('-');
-      if (parts.length == 3) {
-        return '${parts[2]}/${parts[1]}/${parts[0]}'; // DD/MM/YYYY
+    try {
+      if (date.length >= 10) {
+        final dateTime = DateTime.parse(date);
+        return '${dateTime.day.toString().padLeft(2, '0')}/${dateTime.month.toString().padLeft(2, '0')}/${dateTime.year}';
+      }
+    } catch (e) {
+      if (date.length >= 10) {
+        final parts = date.substring(0, 10).split('-');
+        if (parts.length == 3) {
+          return '${parts[2]}/${parts[1]}/${parts[0]}';
+        }
       }
     }
     return date;
@@ -184,7 +212,7 @@ class Note {
 
   @override
   String toString() {
-    return 'Note(id: $id, title: $title, favorite: $isFavorite, deleted: $isDeleted, tags: $tags)';
+    return 'Note(id: $id, title: $title, favorite: $isFavorite, archived: $isArchived, deleted: $isDeleted, tags: $tags)';
   }
 
   @override
@@ -198,6 +226,7 @@ class Note {
         other.updatedAt == updatedAt &&
         other.deletedAt == deletedAt &&
         other.isFavorite == isFavorite &&
+        other.isArchived == isArchived &&  // 👈 NUEVO CAMPO
         other.colorHex == colorHex;
   }
 
@@ -211,6 +240,7 @@ class Note {
       updatedAt,
       deletedAt,
       isFavorite,
+      isArchived,  // 👈 NUEVO CAMPO
       colorHex,
     );
   }

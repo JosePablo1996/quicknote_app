@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'dart:ui';
 import 'package:provider/provider.dart';
 import '../models/note.dart';
-import '../services/api_service.dart';
 import '../providers/note_provider.dart';
 import '../widgets/empty_notes_widget.dart';
 import '../widgets/custom_header.dart';
@@ -12,6 +11,8 @@ import '../providers/theme_provider.dart';
 import '../utils/snackbar_utils.dart';
 import 'note_form_screen.dart';
 import 'note_detail_screen.dart';
+import 'favorites_screen.dart';
+import 'archived_screen.dart';
 
 class NoteListScreen extends StatefulWidget {
   const NoteListScreen({super.key});
@@ -21,12 +22,10 @@ class NoteListScreen extends StatefulWidget {
 }
 
 class _NoteListScreenState extends State<NoteListScreen>
-    with SingleTickerProviderStateMixin {
-  final ApiService _apiService = ApiService();
+    with TickerProviderStateMixin {
   List<Note> _notes = [];
   bool _isLoading = false;
   final TextEditingController _searchController = TextEditingController();
-  bool _isSearching = false;
   String _selectedCategory = 'Todas';
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   
@@ -42,12 +41,15 @@ class _NoteListScreenState extends State<NoteListScreen>
   
   // Variables para selección múltiple
   bool _isSelectionMode = false;
-  Set<int> _selectedNoteIds = {};
+  final Set<int> _selectedNoteIds = {};
 
   // Controlador de animación para el FAB
   late AnimationController _fabAnimationController;
   late Animation<double> _fabScaleAnimation;
   late Animation<double> _fabRotationAnimation;
+  
+  // Controlador para la animación de parpadeo de favoritos
+  late AnimationController _favoriteBlinkController;
 
   @override
   void initState() {
@@ -73,12 +75,17 @@ class _NoteListScreenState extends State<NoteListScreen>
         curve: Curves.easeInOut,
       ),
     );
+    
+    // Controlador para animación de parpadeo
+    _favoriteBlinkController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1000),
+    )..repeat(reverse: true);
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Escuchar cambios en el provider
     _loadNotesFromProvider();
   }
 
@@ -86,6 +93,7 @@ class _NoteListScreenState extends State<NoteListScreen>
   void dispose() {
     _searchController.dispose();
     _fabAnimationController.dispose();
+    _favoriteBlinkController.dispose();
     super.dispose();
   }
 
@@ -100,8 +108,20 @@ class _NoteListScreenState extends State<NoteListScreen>
       
       if (mounted) {
         setState(() {
-          _notes = noteProvider.notes.where((note) => !note.isDeleted).toList();
+          // Filtrar notas no eliminadas Y no archivadas para la lista principal
+          _notes = noteProvider.notes
+              .where((note) => !note.isDeleted && !note.isArchived)
+              .toList();
           _isLoading = false;
+          debugPrint('📋 Notas cargadas en lista principal: ${_notes.length}');
+          
+          // Si la categoría seleccionada ya no existe (porque se eliminó), volver a "Todas"
+          if (_selectedCategory != 'Todas') {
+            final categoryExists = _notes.any((note) => note.tags.contains(_selectedCategory));
+            if (!categoryExists) {
+              _selectedCategory = 'Todas';
+            }
+          }
         });
       }
     } catch (e) {
@@ -257,32 +277,212 @@ class _NoteListScreenState extends State<NoteListScreen>
       ),
     );
 
-    if (!mounted) return;
+    if (confirm != true || !mounted) return;
 
-    if (confirm == true) {
-      final noteProvider = Provider.of<NoteProvider>(context, listen: false);
+    final noteProvider = Provider.of<NoteProvider>(context, listen: false);
+    
+    setState(() => _isLoading = true);
+    
+    try {
+      final success = await noteProvider.deleteNote(note.id);
       
-      setState(() => _isLoading = true);
-      
-      try {
-        final success = await noteProvider.deleteNote(note.id);
+      if (success && mounted) {
+        await _loadNotesFromProvider();
         
-        if (success && mounted) {
-          await _loadNotesFromProvider();
-          
-          SnackbarUtils.showSuccessSnackbar(
-            context, 
-            '"${note.title}" movida a la papelera'
-          );
-        }
-      } catch (e) {
-        if (mounted) {
-          setState(() => _isLoading = false);
-          SnackbarUtils.showErrorSnackbar(
-            context, 
-            'Error al eliminar: $e'
-          );
-        }
+        SnackbarUtils.showSuccessSnackbar(
+          context, 
+          '"${note.title}" movida a la papelera'
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        SnackbarUtils.showErrorSnackbar(
+          context, 
+          'Error al eliminar: $e'
+        );
+      }
+    }
+  }
+
+  // Función para añadir/quitar favoritos
+  Future<void> _toggleFavorite(Note note) async {
+    final noteProvider = Provider.of<NoteProvider>(context, listen: false);
+    final newFavoriteState = !note.isFavorite;
+    final updatedNote = note.copyWithFavorite(newFavoriteState);
+    
+    try {
+      await noteProvider.updateNote(updatedNote);
+      
+      if (mounted) {
+        // Forzar recarga completa para actualizar la lista
+        await _loadNotesFromProvider();
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                AnimatedBuilder(
+                  animation: _favoriteBlinkController,
+                  builder: (context, child) {
+                    return Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: newFavoriteState 
+                            ? Colors.amber.withValues(alpha: 0.2 + (_favoriteBlinkController.value * 0.5))
+                            : Colors.grey,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        newFavoriteState ? Icons.star : Icons.star_border,
+                        color: newFavoriteState 
+                            ? Colors.amber.shade400
+                            : Colors.white,
+                        size: 24,
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        newFavoriteState 
+                            ? '✨ ¡Nota favorita!' 
+                            : 'Nota quitada de favoritos',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        newFavoriteState
+                            ? 'La nota ha sido añadida a favoritos'
+                            : 'La nota ya no está en favoritos',
+                        style: const TextStyle(
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: newFavoriteState ? Colors.amber.shade700 : Colors.grey.shade700,
+            duration: const Duration(seconds: 3),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+            margin: const EdgeInsets.all(10),
+            action: SnackBarAction(
+              label: 'VER',
+              textColor: Colors.white,
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const FavoritesScreen(),
+                  ),
+                );
+              },
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        SnackbarUtils.showErrorSnackbar(
+          context,
+          'Error al actualizar favorito: $e',
+        );
+      }
+    }
+  }
+
+  // Función para archivar/desarchivar notas
+  Future<void> _toggleArchive(Note note) async {
+    final noteProvider = Provider.of<NoteProvider>(context, listen: false);
+    final newArchiveState = !note.isArchived;
+    final updatedNote = note.copyWithArchived(newArchiveState);
+    
+    try {
+      debugPrint('📦 Archivando nota ${note.id} - nuevo estado: $newArchiveState');
+      
+      await noteProvider.updateNote(updatedNote);
+      
+      if (mounted) {
+        // FORZAR RECARGA COMPLETA DE NOTAS DESDE EL PROVIDER
+        await _loadNotesFromProvider();
+        
+        // Mostrar notificación
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                Icon(
+                  newArchiveState ? Icons.archive : Icons.unarchive,
+                  color: Colors.white,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        newArchiveState 
+                            ? '📦 Nota archivada' 
+                            : 'Nota restaurada',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        newArchiveState
+                            ? 'La nota se movió a archivadas'
+                            : 'La nota volvió a la lista principal',
+                        style: const TextStyle(
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: newArchiveState ? Colors.teal.shade700 : Colors.green.shade700,
+            duration: const Duration(seconds: 3),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+            margin: const EdgeInsets.all(10),
+            action: SnackBarAction(
+              label: 'VER',
+              textColor: Colors.white,
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const ArchivedScreen(),
+                  ),
+                );
+              },
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        SnackbarUtils.showErrorSnackbar(
+          context,
+          'Error al archivar: $e',
+        );
       }
     }
   }
@@ -390,6 +590,29 @@ class _NoteListScreenState extends State<NoteListScreen>
                     ],
                   ),
                   const SizedBox(height: 24),
+                  
+                  // Opción de favoritos
+                  _buildModalOption(
+                    icon: note.isFavorite ? Icons.star : Icons.star_border,
+                    label: note.isFavorite ? 'Quitar de favoritos' : 'Añadir a favoritos',
+                    color: Colors.amber,
+                    onTap: () {
+                      Navigator.pop(context);
+                      _toggleFavorite(note);
+                    },
+                  ),
+                  
+                  // Opción de archivar/desarchivar
+                  _buildModalOption(
+                    icon: note.isArchived ? Icons.unarchive : Icons.archive,
+                    label: note.isArchived ? 'Desarchivar nota' : 'Archivar nota',
+                    color: Colors.teal,
+                    onTap: () {
+                      Navigator.pop(context);
+                      _toggleArchive(note);
+                    },
+                  ),
+                  
                   _buildModalOption(
                     icon: Icons.edit,
                     label: 'Editar nota',
@@ -555,31 +778,35 @@ class _NoteListScreenState extends State<NoteListScreen>
   void _showSortDialog() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Ordenar notas'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: _sortOptions.map((option) {
-            return RadioListTile<String>(
-              title: Text(option),
-              value: option,
-              groupValue: _currentSortOption,
-              onChanged: (value) {
-                setState(() {
-                  _currentSortOption = value!;
-                });
-                Navigator.pop(context);
-                SnackbarUtils.showInfoSnackbar(
-                  context,
-                  'Ordenado por: $value',
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          return AlertDialog(
+            title: const Text('Ordenar notas'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: _sortOptions.map((option) {
+                return RadioListTile<String>(
+                  title: Text(option),
+                  value: option,
+                  groupValue: _currentSortOption,
+                  onChanged: (value) {
+                    setState(() {
+                      _currentSortOption = value!;
+                    });
+                    Navigator.pop(context);
+                    SnackbarUtils.showInfoSnackbar(
+                      context,
+                      'Ordenado por: $value',
+                    );
+                  },
                 );
-              },
-            );
-          }).toList(),
-        ),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
+              }).toList(),
+            ),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+          );
+        },
       ),
     );
   }
@@ -631,6 +858,34 @@ class _NoteListScreenState extends State<NoteListScreen>
       Colors.indigo,
     ];
     return colors[note.id % colors.length];
+  }
+
+  // Widget para el punto de notificación parpadeante
+  Widget _buildBlinkingNotification() {
+    return AnimatedBuilder(
+      animation: _favoriteBlinkController,
+      builder: (context, child) {
+        return Container(
+          width: 14,
+          height: 14,
+          decoration: BoxDecoration(
+            color: Colors.amber.withValues(alpha: 0.3 + (_favoriteBlinkController.value * 0.7)),
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: Colors.white,
+              width: 2,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.amber.withValues(alpha: 0.5),
+                blurRadius: 4 + (_favoriteBlinkController.value * 4),
+                spreadRadius: 1,
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   Widget _buildGridCard(Note note, String initials, Color noteColor, bool isDarkMode) {
@@ -698,6 +953,15 @@ class _NoteListScreenState extends State<NoteListScreen>
                   ),
                 ),
               ),
+            
+            // Indicador de favorito (LED parpadeante)
+            if (note.isFavorite)
+              Positioned(
+                bottom: 8,
+                right: 8,
+                child: _buildBlinkingNotification(),
+              ),
+              
             Padding(
               padding: const EdgeInsets.all(12),
               child: Column(
@@ -808,102 +1072,114 @@ class _NoteListScreenState extends State<NoteListScreen>
             ),
           ],
         ),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 50,
-                height: 50,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      noteColor,
-                      noteColor.withValues(alpha: 0.8),
-                    ],
-                  ),
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                      color: noteColor.withValues(alpha: 0.3),
-                      blurRadius: 8,
-                    ),
-                  ],
-                ),
-                child: Center(
-                  child: Text(
-                    initials,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            note.title,
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: noteColor,
-                            ),
-                          ),
+        child: Stack(
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 50,
+                    height: 50,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          noteColor,
+                          noteColor.withValues(alpha: 0.8),
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: noteColor.withValues(alpha: 0.3),
+                          blurRadius: 8,
                         ),
-                        if (_isSelectionMode && _selectedNoteIds.contains(note.id))
-                          Container(
-                            padding: const EdgeInsets.all(4),
-                            decoration: const BoxDecoration(
-                              color: Colors.blue,
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(
-                              Icons.check,
-                              color: Colors.white,
-                              size: 14,
-                            ),
-                          ),
                       ],
                     ),
-                    const SizedBox(height: 8),
-                    Text(
-                      note.content,
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-                        height: 1.4,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Creada: ${note.formattedCreatedDate}',
-                      style: TextStyle(
-                        fontSize: 10,
-                        color: isDarkMode ? Colors.grey[500] : Colors.grey[500],
+                    child: Center(
+                      child: Text(
+                        initials,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                note.title,
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: noteColor,
+                                ),
+                              ),
+                            ),
+                            if (_isSelectionMode && _selectedNoteIds.contains(note.id))
+                              Container(
+                                padding: const EdgeInsets.all(4),
+                                decoration: const BoxDecoration(
+                                  color: Colors.blue,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.check,
+                                  color: Colors.white,
+                                  size: 14,
+                                ),
+                              ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          note.content,
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                            height: 1.4,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Creada: ${note.formattedCreatedDate}',
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: isDarkMode ? Colors.grey[500] : Colors.grey[500],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
+            ),
+            
+            // Indicador de favorito (LED parpadeante)
+            if (note.isFavorite)
+              Positioned(
+                bottom: 8,
+                right: 8,
+                child: _buildBlinkingNotification(),
+              ),
+          ],
         ),
       ),
     );
   }
 
-  // Widget para el FAB animado en la esquina inferior derecha
+  // Widget para el FAB animado
   Widget _buildAnimatedFAB() {
     return AnimatedBuilder(
       animation: _fabAnimationController,
@@ -920,7 +1196,6 @@ class _NoteListScreenState extends State<NoteListScreen>
         onPressed: _isSelectionMode || _isLoading
             ? null
             : () async {
-                // Animación al presionar
                 await _fabAnimationController.animateTo(0.0,
                     duration: const Duration(milliseconds: 200));
                 
@@ -937,7 +1212,6 @@ class _NoteListScreenState extends State<NoteListScreen>
                   ),
                 );
                 
-                // Reiniciar animación después de volver
                 _fabAnimationController.repeat(reverse: true);
                 
                 if (result == true && mounted) {
@@ -978,7 +1252,9 @@ class _NoteListScreenState extends State<NoteListScreen>
                 });
                 SnackbarUtils.showInfoSnackbar(
                   context,
-                  'Filtrando por: $category',
+                  category == 'Todas' 
+                      ? 'Mostrando todas las notas'
+                      : 'Filtrando por etiqueta: $category',
                 );
               },
               onLeftMenuTap: _openLeftMenu,
@@ -1071,6 +1347,7 @@ class _NoteListScreenState extends State<NoteListScreen>
   }
 
   Widget _buildNotesList(bool isDarkMode) {
+    // Filtrar notas según la categoría seleccionada (etiqueta)
     final filteredNotes = _selectedCategory == 'Todas'
         ? _notes
         : _notes.where((note) => note.tags.contains(_selectedCategory)).toList();

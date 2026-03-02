@@ -100,7 +100,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
         future: _futureNotes,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return Center(
+            return const Center(
               child: CircularProgressIndicator(
                 color: Colors.blue,
                 strokeWidth: 3,

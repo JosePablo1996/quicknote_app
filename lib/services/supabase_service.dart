@@ -1,6 +1,5 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter/foundation.dart'; // 👈 IMPORTANTE: Esta importación es necesaria para debugPrint
-import 'dart:typed_data';
 import '../models/developer_profile.dart';
 
 class SupabaseService {

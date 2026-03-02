@@ -12,11 +12,158 @@ class ChangelogScreen extends StatefulWidget {
 
 class _ChangelogScreenState extends State<ChangelogScreen> {
   // Controlar qué versión está expandida
-  final Set<String> _expandedVersions = {'2.2.0'}; // Por defecto, la última versión expandida
+  final Set<String> _expandedVersions = {'2.3.0'}; // Por defecto, la última versión expandida
 
   final List<VersionData> _versions = [
-    // VERSIÓN 2.2.0 - ACTUAL
-    VersionData(
+    // VERSIÓN 2.3.0 - ACTUAL (con todos los cambios implementados)
+    const VersionData(
+      version: '2.3.0',
+      date: '01 Mar 2026',
+      title: 'Sistema Completo de Etiquetas y Archivado',
+      cardCorner: CardCorner.rounded,
+      changes: [
+        ChangeCategory(
+          title: '🚀 Nuevas Funcionalidades',
+          icon: Icons.rocket_launch,
+          color: 0xFF4CAF50,
+          items: [
+            ChangeItem(
+              description: '🏷️ Sistema completo de etiquetas',
+              subItems: [
+                'Gestión de etiquetas (TagsScreen) con vista lista/nube',
+                'Filtrado dinámico por etiquetas en lista principal',
+                'Colores únicos por etiqueta usando Tag.getColorForName()',
+                'Diálogo de selección con sugerencias y colores',
+                'Navegación a TagNotesScreen desde cualquier etiqueta',
+              ],
+            ),
+            ChangeItem(
+              description: '📦 Pantalla de notas archivadas (ArchivedScreen)',
+              subItems: [
+                'Archivar y desarchivar notas',
+                'Restauración múltiple desde archivadas',
+                'Indicador visual de notas archivadas',
+              ],
+            ),
+            ChangeItem(
+              description: '⭐ Indicador LED parpadeante para favoritos',
+              subItems: [
+                'LED parpadeante en notas favoritas',
+                'Snackbar animado al marcar/desmarcar',
+              ],
+            ),
+            ChangeItem(
+              description: '🎨 Colores personalizados por etiqueta',
+              subItems: [
+                'Paleta de colores única por etiqueta',
+                'Iconos sugeridos según nombre de etiqueta',
+              ],
+            ),
+            ChangeItem(
+              description: '🔄 Endpoints específicos en backend',
+              subItems: [
+                'POST /toggle-favorite y /toggle-archived',
+                'GET /deleted/all para papelera',
+                'GET /stats/summary con estadísticas completas',
+              ],
+            ),
+          ],
+        ),
+        ChangeCategory(
+          title: '✨ Mejoras UI/UX',
+          icon: Icons.brush,
+          color: 0xFF2196F3,
+          items: [
+            ChangeItem(
+              description: '🎯 CustomHeader rediseñado',
+              subItems: [
+                'Dropdown dinámico con todas las etiquetas existentes',
+                'Título estilizado con gradiente',
+                'Cada etiqueta muestra su color característico',
+              ],
+            ),
+            ChangeItem(
+              description: '💬 Diálogo de selección de etiquetas mejorado',
+              subItems: [
+                'Sugerencias de etiquetas existentes',
+                'Colores únicos por etiqueta',
+                'Eliminación de tags con confirmación',
+              ],
+            ),
+            ChangeItem(
+              description: '⚡ Optimización en sincronización con backend',
+              subItems: [
+                'Workaround para preservar estados locales',
+                'Manejo de errores de red mejorado',
+                'Logs detallados para debugging',
+              ],
+            ),
+            ChangeItem(
+              description: '🎨 NoteDetailScreen mejorada',
+              subItems: [
+                'Badge de "Archivada" visible',
+                'Etiquetas cliqueables navegan a TagNotesScreen',
+                'Indicadores de estado favorito/archivado',
+              ],
+            ),
+            ChangeItem(
+              description: '📊 Backend actualizado a v1.2.0',
+              subItems: [
+                'Nuevos campos: is_favorite, is_archived, tags, color_hex, deleted_at',
+                'Validadores para tags y colores hexadecimales',
+                'Índices optimizados para consultas',
+              ],
+            ),
+          ],
+        ),
+        ChangeCategory(
+          title: '🐛 Correcciones',
+          icon: Icons.bug_report,
+          color: 0xFFFF9800,
+          items: [
+            ChangeItem(
+              description: '🔧 Correcciones críticas',
+              subItems: [
+                'Error 500 en API por columna deleted_at faltante',
+                'Pantalla negra en diálogo de etiquetas',
+                'Persistencia de etiquetas al recargar la app',
+                'Tags no se enviaban al backend',
+                'Filtros fijos reemplazados por dropdown dinámico',
+              ],
+            ),
+          ],
+        ),
+        ChangeCategory(
+          title: '🛠️ Técnico',
+          icon: Icons.code,
+          color: 0xFF9C27B0,
+          items: [
+            ChangeItem(
+              description: '📱 App Flutter',
+              subItems: [
+                'Nuevas pantallas: TagsScreen, ArchivedScreen, TagNotesScreen',
+                'Models: Note actualizado con isFavorite, isArchived, tags, colorHex, deletedAt',
+                'Tag model con sistema de colores único',
+                'Providers: NoteProvider con workaround para preservar estados',
+                'Services: ApiService con envío correcto de tags',
+              ],
+            ),
+            ChangeItem(
+              description: '🖥️ Backend API',
+              subItems: [
+                'Versión actualizada a 1.2.0',
+                'Modelo Note con nuevos campos',
+                'Esquemas Pydantic actualizados',
+                'Rutas con nuevos endpoints',
+                'Base de datos PostgreSQL con JSONB',
+              ],
+            ),
+          ],
+        ),
+      ],
+    ),
+    // VERSIÓN 2.2.0 - SISTEMA DE PAPELERA Y CENTRO DE AYUDA
+    const VersionData(
       version: '2.2.0',
       date: '26 Feb 2026',
       title: 'Sistema de Papelera y Centro de Ayuda',
@@ -94,7 +241,7 @@ class _ChangelogScreenState extends State<ChangelogScreen> {
       ],
     ),
     // VERSIÓN 2.1.2
-    VersionData(
+    const VersionData(
       version: '2.1.2',
       date: '25 Feb 2026',
       title: 'Sistema de Backup/Restore',
@@ -133,7 +280,7 @@ class _ChangelogScreenState extends State<ChangelogScreen> {
       ],
     ),
     // VERSIÓN 2.1.1
-    VersionData(
+    const VersionData(
       version: '2.1.1',
       date: '24 Feb 2026',
       title: 'Perfil del Desarrollador',
@@ -184,7 +331,7 @@ class _ChangelogScreenState extends State<ChangelogScreen> {
       ],
     ),
     // VERSIÓN 2.1.0
-    VersionData(
+    const VersionData(
       version: '2.1.0',
       date: '23 Feb 2026',
       title: 'Sistema de Seguridad',
@@ -221,7 +368,7 @@ class _ChangelogScreenState extends State<ChangelogScreen> {
       ],
     ),
     // VERSIÓN 2.0.0
-    VersionData(
+    const VersionData(
       version: '2.0.0',
       date: '22 Feb 2026',
       title: 'Modo Oscuro/Claro',
@@ -258,7 +405,7 @@ class _ChangelogScreenState extends State<ChangelogScreen> {
       ],
     ),
     // VERSIÓN 1.2.0
-    VersionData(
+    const VersionData(
       version: '1.2.0',
       date: '21 Feb 2026',
       title: 'Mejoras UI/UX',
@@ -300,7 +447,7 @@ class _ChangelogScreenState extends State<ChangelogScreen> {
       ],
     ),
     // VERSIÓN 1.1.0
-    VersionData(
+    const VersionData(
       version: '1.1.0',
       date: '20 Feb 2026',
       title: 'Mejoras de Interfaz',
@@ -347,7 +494,7 @@ class _ChangelogScreenState extends State<ChangelogScreen> {
       ],
     ),
     // VERSIÓN 1.0.0
-    VersionData(
+    const VersionData(
       version: '1.0.0',
       date: '19 Feb 2026',
       title: 'Versión Inicial',
@@ -605,7 +752,7 @@ class _ChangelogScreenState extends State<ChangelogScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // TÍTULO DE LA VERSIÓN DENTRO DE LA TARJETA EXPANDIDA (CON FONDO DE COLOR)
+                            // TÍTULO DE LA VERSIÓN DENTRO DE LA TARJETA EXPANDIDA
                             Container(
                               margin: const EdgeInsets.only(bottom: 20),
                               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
