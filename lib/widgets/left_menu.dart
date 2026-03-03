@@ -233,7 +233,7 @@ class _LeftMenuState extends State<LeftMenu>
                                       ),
                                     ),
                                     child: const Text(
-                                      'v 2.3.0',
+                                      'v 2.5.0',
                                       style: TextStyle(
                                         fontSize: 12,
                                         fontWeight: FontWeight.w600,

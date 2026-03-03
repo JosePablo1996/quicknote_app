@@ -7,7 +7,6 @@ import '../utils/snackbar_utils.dart';
 
 class NoteMenu extends StatefulWidget {
   final VoidCallback onViewList;
-  final VoidCallback onSelect;
   final VoidCallback onSort;
   final VoidCallback onSync;
   final VoidCallback onImport;
@@ -15,7 +14,6 @@ class NoteMenu extends StatefulWidget {
   const NoteMenu({
     super.key,
     required this.onViewList,
-    required this.onSelect,
     required this.onSort,
     required this.onSync,
     required this.onImport,
@@ -101,405 +99,16 @@ class _NoteMenuState extends State<NoteMenu>
     });
   }
 
-  Future<void> _handleSelectMultiple() async {
+  // ✅ Función de sincronización simplificada (tomada del script original)
+  Future<void> _handleSync() async {
     _animationController.reverse().then((_) async {
       if (!mounted) return;
       
       Navigator.pop(context);
       
-      final noteProvider = Provider.of<NoteProvider>(context, listen: false);
-      
-      if (noteProvider.notes.isEmpty) {
-        SnackbarUtils.showInfoSnackbar(
-          context,
-          'No hay notas para seleccionar',
-        );
-        return;
-      }
-      
-      _showMultiSelectDialog(noteProvider);
+      // Llamar directamente al callback de sincronización
+      widget.onSync();
     });
-  }
-
-  Future<void> _showMultiSelectDialog(NoteProvider noteProvider) async {
-    final List<bool> selected = List.generate(noteProvider.notes.length, (index) => false);
-    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
-    final isDarkMode = themeProvider.isDarkMode;
-    
-    return showDialog(
-      context: context,
-      barrierDismissible: true,
-      barrierColor: Colors.black.withValues(alpha: 0.5),
-      builder: (dialogContext) {
-        return StatefulBuilder(
-          builder: (context, setState) {
-            final selectedCount = selected.where((s) => s).length;
-            
-            return Dialog(
-              backgroundColor: Colors.transparent,
-              elevation: 0,
-              insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-              child: Container(
-                width: double.infinity,
-                constraints: BoxConstraints(
-                  maxHeight: MediaQuery.of(context).size.height * 0.7,
-                ),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(30),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.blue.withValues(alpha: 0.2),
-                      blurRadius: 30,
-                      spreadRadius: 0,
-                      offset: const Offset(0, 10),
-                    ),
-                  ],
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(30),
-                  child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: isDarkMode
-                              ? [
-                                  Colors.grey[900]!.withValues(alpha: 0.8),
-                                  Colors.grey[850]!.withValues(alpha: 0.7),
-                                ]
-                              : [
-                                  Colors.white.withValues(alpha: 0.9),
-                                  Colors.grey[50]!.withValues(alpha: 0.8),
-                                ],
-                        ),
-                        border: Border.all(
-                          color: isDarkMode
-                              ? Colors.grey[600]!.withValues(alpha: 0.3)
-                              : Colors.white.withValues(alpha: 0.5),
-                          width: 1.5,
-                        ),
-                      ),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(20),
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: [
-                                  Colors.blue.shade700,
-                                  Colors.purple.shade700,
-                                ],
-                              ),
-                              borderRadius: const BorderRadius.vertical(
-                                top: Radius.circular(30),
-                              ),
-                            ),
-                            child: Row(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.all(8),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withValues(alpha: 0.2),
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: const Icon(
-                                    Icons.checklist,
-                                    color: Colors.white,
-                                    size: 24,
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      const Text(
-                                        'Seleccionar notas',
-                                        style: TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 18,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                      Text(
-                                        '$selectedCount seleccionadas',
-                                        style: const TextStyle(
-                                          color: Colors.white70,
-                                          fontSize: 13,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                IconButton(
-                                  icon: const Icon(Icons.close, color: Colors.white),
-                                  onPressed: () => Navigator.pop(context),
-                                ),
-                              ],
-                            ),
-                          ),
-                          
-                          Expanded(
-                            child: ListView.builder(
-                              padding: const EdgeInsets.all(8),
-                              itemCount: noteProvider.notes.length,
-                              itemBuilder: (context, index) {
-                                final note = noteProvider.notes[index];
-                                return Container(
-                                  margin: const EdgeInsets.symmetric(vertical: 4),
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(15),
-                                    color: selected[index]
-                                        ? Colors.blue.withValues(alpha: 0.1)
-                                        : Colors.transparent,
-                                    border: Border.all(
-                                      color: selected[index]
-                                          ? Colors.blue
-                                          : Colors.grey.withValues(alpha: 0.2),
-                                      width: selected[index] ? 2 : 1,
-                                    ),
-                                  ),
-                                  child: ListTile(
-                                    leading: Checkbox(
-                                      value: selected[index],
-                                      onChanged: (value) {
-                                        setState(() {
-                                          selected[index] = value ?? false;
-                                        });
-                                      },
-                                      activeColor: Colors.blue,
-                                    ),
-                                    title: Text(
-                                      note.title,
-                                      style: TextStyle(
-                                        fontWeight: selected[index] 
-                                            ? FontWeight.bold 
-                                            : FontWeight.normal,
-                                        color: isDarkMode ? Colors.white : Colors.black87,
-                                      ),
-                                    ),
-                                    subtitle: Text(
-                                      note.content.length > 50
-                                          ? '${note.content.substring(0, 47)}...'
-                                          : note.content,
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-                                      ),
-                                    ),
-                                    onTap: () {
-                                      setState(() {
-                                        selected[index] = !selected[index];
-                                      });
-                                    },
-                                  ),
-                                );
-                              },
-                            ),
-                          ),
-                          
-                          Container(
-                            padding: const EdgeInsets.all(20),
-                            decoration: BoxDecoration(
-                              border: Border(
-                                top: BorderSide(
-                                  color: Colors.grey.withValues(alpha: 0.2),
-                                  width: 1,
-                                ),
-                              ),
-                            ),
-                            child: Row(
-                              children: [
-                                Expanded(
-                                  child: TextButton.icon(
-                                    onPressed: selectedCount == noteProvider.notes.length
-                                        ? () {
-                                            setState(() {
-                                              for (int i = 0; i < selected.length; i++) {
-                                                selected[i] = false;
-                                              }
-                                            });
-                                          }
-                                        : () {
-                                            setState(() {
-                                              for (int i = 0; i < selected.length; i++) {
-                                                selected[i] = true;
-                                              }
-                                            });
-                                          },
-                                    icon: Icon(
-                                      selectedCount == noteProvider.notes.length
-                                          ? Icons.deselect
-                                          : Icons.select_all,
-                                      size: 18,
-                                    ),
-                                    label: Text(
-                                      selectedCount == noteProvider.notes.length
-                                          ? 'Deseleccionar todo'
-                                          : 'Seleccionar todo',
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: ElevatedButton.icon(
-                                    onPressed: selectedCount == 0
-                                        ? null
-                                        : () => _confirmDeleteSelected(
-                                            context,
-                                            noteProvider,
-                                            selected,
-                                          ),
-                                    icon: const Icon(Icons.delete, size: 18),
-                                    label: Text('Eliminar ($selectedCount)'),
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.red,
-                                      foregroundColor: Colors.white,
-                                      disabledBackgroundColor: Colors.grey.shade300,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-
-  Future<void> _confirmDeleteSelected(
-    BuildContext context,
-    NoteProvider noteProvider,
-    List<bool> selected,
-  ) async {
-    final selectedNotes = noteProvider.notes
-        .asMap()
-        .entries
-        .where((entry) => selected[entry.key])
-        .map((entry) => entry.value)
-        .toList();
-    
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Confirmar eliminación'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(
-              Icons.warning_amber_rounded,
-              color: Colors.orange,
-              size: 48,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Se eliminarán ${selectedNotes.length} nota${selectedNotes.length > 1 ? 's' : ''}',
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              '¿Estás seguro de continuar?',
-              style: TextStyle(fontSize: 14),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancelar'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-            ),
-            child: const Text('Eliminar'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirm == true) {
-      Navigator.pop(context);
-      
-      int successCount = 0;
-      
-      for (var note in selectedNotes) {
-        try {
-          await noteProvider.deleteNote(note.id);
-          successCount++;
-        } catch (e) {
-          // Silencioso
-        }
-      }
-      
-      if (successCount > 0 && mounted) {
-        _showSuccessDialog(successCount);
-      }
-    }
-  }
-
-  void _showSuccessDialog(int count) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: const BoxDecoration(
-                color: Colors.green,
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.check,
-                color: Colors.white,
-                size: 32,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              '¡$count nota${count > 1 ? 's' : ''} eliminada${count > 1 ? 's' : ''}!',
-              style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Colors.green,
-              ),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'Las notas han sido eliminadas exitosamente',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 14),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Aceptar'),
-          ),
-        ],
-      ),
-    );
   }
 
   @override
@@ -671,18 +280,9 @@ class _NoteMenuState extends State<NoteMenu>
                           ),
                           const SizedBox(height: 8),
                           _buildMenuItem(
-                            icon: Icons.check_box,
-                            label: 'Seleccionar',
-                            index: 1,
-                            color: Colors.green.shade400,
-                            onTap: _handleSelectMultiple,
-                            isDarkMode: isDarkMode,
-                          ),
-                          const SizedBox(height: 8),
-                          _buildMenuItem(
                             icon: Icons.sort,
                             label: 'Ordenar',
-                            index: 2,
+                            index: 1,
                             color: Colors.orange.shade400,
                             onTap: () => _handleTap(widget.onSort),
                             isDarkMode: isDarkMode,
@@ -691,9 +291,9 @@ class _NoteMenuState extends State<NoteMenu>
                           _buildMenuItem(
                             icon: Icons.sync,
                             label: 'Sincronizar',
-                            index: 3,
+                            index: 2,
                             color: Colors.purple.shade400,
-                            onTap: () => _handleTap(widget.onSync),
+                            onTap: _handleSync, // 👉 Usamos la función simplificada
                             isDarkMode: isDarkMode,
                           ),
                         ],

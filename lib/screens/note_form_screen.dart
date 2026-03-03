@@ -113,10 +113,67 @@ class _NoteFormScreenState extends State<NoteFormScreen>
         );
         await noteProvider.createNote(newNote);
         if (mounted) {
-          SnackbarUtils.showSuccessSnackbar(
-            context, 
-            'Nota creada exitosamente',
-          );
+          // 1. Mostrar notificación cuando se guarda en modo offline
+          if (noteProvider.isOffline) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.withValues(alpha: 0.2),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.sync_problem,
+                        color: Colors.orange,
+                        size: 18,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '📱 Modo offline',
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                          SizedBox(height: 2),
+                          Text(
+                            'Nota guardada localmente - Se sincronizará cuando haya conexión',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.white70,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                backgroundColor: Colors.orange.shade800,
+                duration: const Duration(seconds: 4),
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                margin: const EdgeInsets.all(12),
+              ),
+            );
+          } else {
+            SnackbarUtils.showSuccessSnackbar(
+              context, 
+              'Nota creada exitosamente',
+            );
+          }
+          // Retornar true para indicar que hubo cambios
+          Navigator.pop(context, true);
         }
       } else {
         // Actualizar nota existente
@@ -133,21 +190,76 @@ class _NoteFormScreenState extends State<NoteFormScreen>
         );
         await noteProvider.updateNote(updatedNote);
         if (mounted) {
-          SnackbarUtils.showInfoSnackbar(
-            context, 
-            'Nota actualizada exitosamente',
-          );
+          // 1. Mostrar notificación cuando se guarda en modo offline
+          if (noteProvider.isOffline) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.withValues(alpha: 0.2),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.sync_problem,
+                        color: Colors.orange,
+                        size: 18,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '📱 Modo offline',
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                          SizedBox(height: 2),
+                          Text(
+                            'Nota guardada localmente - Se sincronizará cuando haya conexión',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.white70,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                backgroundColor: Colors.orange.shade800,
+                duration: const Duration(seconds: 4),
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                margin: const EdgeInsets.all(12),
+              ),
+            );
+          } else {
+            SnackbarUtils.showInfoSnackbar(
+              context, 
+              'Nota actualizada exitosamente',
+            );
+          }
+          // Retornar true para indicar que hubo cambios
+          Navigator.pop(context, true);
         }
       }
-      
-      await Future.delayed(const Duration(milliseconds: 500));
-      if (mounted) Navigator.pop(context, true);
     } catch (e) {
       if (mounted) {
         SnackbarUtils.showErrorSnackbar(
           context, 
           'Error al guardar: ${e.toString()}',
         );
+        // En caso de error, retornar false (aunque Navigator.pop no se llama)
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -742,6 +854,7 @@ class _NoteFormScreenState extends State<NoteFormScreen>
             context, 
             'Nota eliminada',
           );
+          // Retornar true para indicar que hubo cambios
           Navigator.pop(context, true);
         }
       } catch (e) {
@@ -758,6 +871,7 @@ class _NoteFormScreenState extends State<NoteFormScreen>
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
+    final noteProvider = Provider.of<NoteProvider>(context);
     final isDarkMode = themeProvider.isDarkMode;
     final isEditing = widget.note != null;
 
@@ -788,7 +902,22 @@ class _NoteFormScreenState extends State<NoteFormScreen>
           onPressed: () => Navigator.pop(context),
         ),
         actions: [
-          // Indicadores de estado
+          // 2. Mostrar indicador de estado offline en el AppBar
+          if (noteProvider.isOffline)
+            Container(
+              margin: const EdgeInsets.only(right: 4),
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: Colors.orange.withValues(alpha: 0.2),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.wifi_off,
+                color: Colors.orange,
+                size: 18,
+              ),
+            ),
+          // Indicadores de estado existentes
           if (_isFavorite)
             Container(
               margin: const EdgeInsets.only(right: 4),
@@ -872,6 +1001,36 @@ class _NoteFormScreenState extends State<NoteFormScreen>
                 key: _formKey,
                 child: Column(
                   children: [
+                    // 3. Mensaje informativo en modo offline
+                    if (noteProvider.isOffline)
+                      Container(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: Colors.orange.shade100,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: Colors.orange.shade300),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.info_outline,
+                              color: Colors.orange,
+                              size: 16,
+                            ),
+                            const SizedBox(width: 8),
+                            const Expanded(
+                              child: Text(
+                                'Modo offline - Los cambios se guardarán localmente',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.orange,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     // Contenedor del título
                     Container(
                       width: double.infinity,
@@ -1225,12 +1384,18 @@ class _NoteFormScreenState extends State<NoteFormScreen>
                               _showArchiveNotification();
                             },
                           ),
-                          _buildActionButton(
-                            icon: Icons.save,
-                            label: 'Guardar',
-                            isActive: true,
-                            isDarkMode: isDarkMode,
-                            onTap: _saveNote,
+                          // 4. Tooltip en el botón guardar
+                          Tooltip(
+                            message: noteProvider.isOffline 
+                                ? 'Guardar localmente (modo offline)' 
+                                : 'Guardar y sincronizar',
+                            child: _buildActionButton(
+                              icon: Icons.save,
+                              label: 'Guardar',
+                              isActive: true,
+                              isDarkMode: isDarkMode,
+                              onTap: _saveNote,
+                            ),
                           ),
                         ],
                       ),

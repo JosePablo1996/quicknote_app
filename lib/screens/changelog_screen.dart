@@ -12,15 +12,172 @@ class ChangelogScreen extends StatefulWidget {
 
 class _ChangelogScreenState extends State<ChangelogScreen> {
   // Controlar qué versión está expandida
-  final Set<String> _expandedVersions = {'2.3.0'}; // Por defecto, la última versión expandida
+  final Set<String> _expandedVersions = {'2.5.0'}; // Por defecto, la última versión expandida
 
   final List<VersionData> _versions = [
-    // VERSIÓN 2.3.0 - ACTUAL (con todos los cambios implementados)
-    const VersionData(
+    // ========== VERSIÓN 2.5.0 - ACTUAL (con todos los cambios implementados) ==========
+    VersionData(
+      version: '2.5.0',
+      date: '03 Mar 2026',
+      title: '🏆 Sincronización Offline Perfecta',
+      cardCorner: CardCorner.rounded,
+      gradientColors: [0xFF6366F1, 0xFF8B5CF6], // Indigo a Violeta
+      changes: [
+        ChangeCategory(
+          title: '🚀 Nuevas Funcionalidades',
+          icon: Icons.rocket_launch,
+          color: 0xFF4CAF50,
+          items: [
+            ChangeItem(
+              description: '📱 Modo Offline Completo',
+              subItems: [
+                'Sistema de base de datos local con SQLite',
+                'Detección automática de conectividad',
+                'Sincronización en segundo plano al recuperar conexión',
+                'Indicadores visuales de estado offline (naranja)',
+                'Tooltips explicativos en tarjetas pendientes',
+              ],
+            ),
+            ChangeItem(
+              description: '🔌 Nuevo widget ConnectionStatus',
+              subItems: [
+                'Barra naranja en la parte superior cuando estás offline',
+                'Mensaje claro: "Modo offline - Los cambios se sincronizarán cuando haya conexión"',
+                'Botón "RECARGAR" para forzar sincronización manual',
+                'Integrado en todas las pantallas principales',
+              ],
+            ),
+            ChangeItem(
+              description: '🔄 Sistema de Verificación y Corrección',
+              subItems: [
+                'Verificación post-guardado en BD local',
+                'Corrección forzada automática si la BD no guarda correctamente',
+                'Logs detallados para debugging',
+                'Sistema de emojis en logs (🔴, 🟡, 🟢)',
+              ],
+            ),
+          ],
+        ),
+        ChangeCategory(
+          title: '🐛 Correcciones Críticas',
+          icon: Icons.bug_report,
+          color: 0xFFFF9800,
+          items: [
+            ChangeItem(
+              description: '🔧 Corrección del Ciclo Offline-Online',
+              subItems: [
+                'Notas restauradas offline ya NO desaparecen al conectar internet',
+                'Corregida inconsistencia en BD local después de restaurar',
+                'Sincronización correcta de notas pendientes',
+                'Verificación de deletedAt en BD después de restaurar',
+                'Forzado de corrección con SQL directo cuando es necesario',
+              ],
+            ),
+            ChangeItem(
+              description: '📱 Correcciones en UI',
+              subItems: [
+                'Refresh automático en eliminación múltiple',
+                'Eliminado spinner que se quedaba cargando en NoteMenu',
+                'Pull-to-refresh funcional incluso en estado vacío',
+                'Mejoras en notificaciones de papelera',
+              ],
+            ),
+          ],
+        ),
+        ChangeCategory(
+          title: '🗑️ Mejoras en Papelera',
+          icon: Icons.delete_outline,
+          color: 0xFFEF4444,
+          items: [
+            ChangeItem(
+              description: '✨ Restauración mejorada',
+              subItems: [
+                'Método _restoreSelectedNotes ahora cuenta éxitos correctamente',
+                'Forzada actualización de UI con notifyListeners()',
+                'Mensajes personalizados para restauración múltiple',
+                'Indicadores visuales de estado offline en papelera',
+              ],
+            ),
+          ],
+        ),
+        ChangeCategory(
+          title: '🛠️ Técnico',
+          icon: Icons.code,
+          color: 0xFF9C27B0,
+          items: [
+            ChangeItem(
+              description: '📱 App Flutter',
+              subItems: [
+                'Nuevas dependencias: sqflite, connectivity_plus, synchronized',
+                'Modelo Note ampliado con isSynced, localId, isPending, lastSyncError',
+                'Nuevo servicio LocalDBService con índices optimizados',
+                'ConnectivityUtil mejorado con singleton y listeners',
+                'NoteProvider con flag _isSyncing para evitar sincronizaciones múltiples',
+                'Método deleteNoteByLocalId para limpieza de notas offline',
+              ],
+            ),
+          ],
+        ),
+      ],
+    ),
+    // ========== VERSIÓN 2.4.0 - Sistema de Notificaciones y Pull-to-Refresh ==========
+    VersionData(
+      version: '2.4.0',
+      date: '02 Mar 2026',
+      title: '⚡ Notificaciones y Pull-to-Refresh',
+      cardCorner: CardCorner.rounded,
+      gradientColors: [0xFF3B82F6, 0xFF10B981], // Azul a Verde
+      changes: [
+        ChangeCategory(
+          title: '🚀 Nuevas Funcionalidades',
+          icon: Icons.rocket_launch,
+          color: 0xFF4CAF50,
+          items: [
+            ChangeItem(
+              description: '🔄 Pull-to-Refresh universal',
+              subItems: [
+                'Agregado RefreshIndicator en note_list_screen.dart incluso sin notas',
+                'Agregado RefreshIndicator en trash_screen.dart',
+                'Permite refrescar manualmente para verificar cambios',
+                'Consistente en toda la app',
+              ],
+            ),
+            ChangeItem(
+              description: '📱 Notificaciones mejoradas',
+              subItems: [
+                'Diseño atractivo con iconos circulares',
+                'Mensajes de título y subtítulo',
+                'Botón "VER" para navegación rápida',
+                'Snackbars animados al marcar/desmarcar favoritos',
+              ],
+            ),
+          ],
+        ),
+        ChangeCategory(
+          title: '✨ Mejoras UI/UX',
+          icon: Icons.brush,
+          color: 0xFF2196F3,
+          items: [
+            ChangeItem(
+              description: '🎨 Optimizaciones visuales',
+              subItems: [
+                'Sincronización fluida desde el menú',
+                'Eliminados spinners que se quedaban cargando',
+                'Mejor feedback visual en operaciones múltiples',
+                'Contador de días desde eliminación en papelera',
+              ],
+            ),
+          ],
+        ),
+      ],
+    ),
+    // ========== VERSIÓN 2.3.0 - Sistema Completo de Etiquetas y Archivado ==========
+    VersionData(
       version: '2.3.0',
       date: '01 Mar 2026',
-      title: 'Sistema Completo de Etiquetas y Archivado',
+      title: '🏷️ Sistema Completo de Etiquetas y Archivado',
       cardCorner: CardCorner.rounded,
+      gradientColors: [0xFFEC4899, 0xFFF59E0B], // Rosa a Naranja
       changes: [
         ChangeCategory(
           title: '🚀 Nuevas Funcionalidades',
@@ -52,21 +209,6 @@ class _ChangelogScreenState extends State<ChangelogScreen> {
                 'Snackbar animado al marcar/desmarcar',
               ],
             ),
-            ChangeItem(
-              description: '🎨 Colores personalizados por etiqueta',
-              subItems: [
-                'Paleta de colores única por etiqueta',
-                'Iconos sugeridos según nombre de etiqueta',
-              ],
-            ),
-            ChangeItem(
-              description: '🔄 Endpoints específicos en backend',
-              subItems: [
-                'POST /toggle-favorite y /toggle-archived',
-                'GET /deleted/all para papelera',
-                'GET /stats/summary con estadísticas completas',
-              ],
-            ),
           ],
         ),
         ChangeCategory(
@@ -90,30 +232,6 @@ class _ChangelogScreenState extends State<ChangelogScreen> {
                 'Eliminación de tags con confirmación',
               ],
             ),
-            ChangeItem(
-              description: '⚡ Optimización en sincronización con backend',
-              subItems: [
-                'Workaround para preservar estados locales',
-                'Manejo de errores de red mejorado',
-                'Logs detallados para debugging',
-              ],
-            ),
-            ChangeItem(
-              description: '🎨 NoteDetailScreen mejorada',
-              subItems: [
-                'Badge de "Archivada" visible',
-                'Etiquetas cliqueables navegan a TagNotesScreen',
-                'Indicadores de estado favorito/archivado',
-              ],
-            ),
-            ChangeItem(
-              description: '📊 Backend actualizado a v1.2.0',
-              subItems: [
-                'Nuevos campos: is_favorite, is_archived, tags, color_hex, deleted_at',
-                'Validadores para tags y colores hexadecimales',
-                'Índices optimizados para consultas',
-              ],
-            ),
           ],
         ),
         ChangeCategory(
@@ -128,46 +246,19 @@ class _ChangelogScreenState extends State<ChangelogScreen> {
                 'Pantalla negra en diálogo de etiquetas',
                 'Persistencia de etiquetas al recargar la app',
                 'Tags no se enviaban al backend',
-                'Filtros fijos reemplazados por dropdown dinámico',
-              ],
-            ),
-          ],
-        ),
-        ChangeCategory(
-          title: '🛠️ Técnico',
-          icon: Icons.code,
-          color: 0xFF9C27B0,
-          items: [
-            ChangeItem(
-              description: '📱 App Flutter',
-              subItems: [
-                'Nuevas pantallas: TagsScreen, ArchivedScreen, TagNotesScreen',
-                'Models: Note actualizado con isFavorite, isArchived, tags, colorHex, deletedAt',
-                'Tag model con sistema de colores único',
-                'Providers: NoteProvider con workaround para preservar estados',
-                'Services: ApiService con envío correcto de tags',
-              ],
-            ),
-            ChangeItem(
-              description: '🖥️ Backend API',
-              subItems: [
-                'Versión actualizada a 1.2.0',
-                'Modelo Note con nuevos campos',
-                'Esquemas Pydantic actualizados',
-                'Rutas con nuevos endpoints',
-                'Base de datos PostgreSQL con JSONB',
               ],
             ),
           ],
         ),
       ],
     ),
-    // VERSIÓN 2.2.0 - SISTEMA DE PAPELERA Y CENTRO DE AYUDA
-    const VersionData(
+    // ========== VERSIÓN 2.2.0 - Sistema de Papelera y Centro de Ayuda ==========
+    VersionData(
       version: '2.2.0',
       date: '26 Feb 2026',
-      title: 'Sistema de Papelera y Centro de Ayuda',
+      title: '🗑️ Sistema de Papelera y Centro de Ayuda',
       cardCorner: CardCorner.rounded,
+      gradientColors: [0xFF8B5CF6, 0xFFEC4899], // Violeta a Rosa
       changes: [
         ChangeCategory(
           title: '🚀 Nuevas Funcionalidades',
@@ -192,60 +283,19 @@ class _ChangelogScreenState extends State<ChangelogScreen> {
                 'Búsqueda funcional en header',
                 'Preguntas frecuentes con dropdown',
                 'Tutoriales rápidos en cards',
-                'Sección de contacto integrada',
-              ],
-            ),
-            ChangeItem(
-              description: '💾 Sistema de Backup mejorado',
-              subItems: [
-                'Backup acumulativo (conserva historial)',
-                'Backup automático programado',
-                'Historial de backups visual',
-              ],
-            ),
-          ],
-        ),
-        ChangeCategory(
-          title: '✨ Mejoras UI/UX',
-          icon: Icons.brush,
-          color: 0xFF2196F3,
-          items: [
-            ChangeItem(
-              description: '🎨 Mejoras visuales',
-              subItems: [
-                'Header con saludo dinámico (🌞/☀️/🌙)',
-                'Splash screen rediseñada',
-                'Glassmorphism consistente',
-                'Animaciones optimizadas',
-                'Mensajes más claros',
-              ],
-            ),
-          ],
-        ),
-        ChangeCategory(
-          title: '🐛 Correcciones',
-          icon: Icons.bug_report,
-          color: 0xFFFF9800,
-          items: [
-            ChangeItem(
-              description: '🔧 Correcciones técnicas',
-              subItems: [
-                'Caracteres ilegales en help_screen',
-                'Verificaciones mounted',
-                'Parámetros incorrectos',
-                'Eliminación de logs',
               ],
             ),
           ],
         ),
       ],
     ),
-    // VERSIÓN 2.1.2
-    const VersionData(
+    // ========== VERSIÓN 2.1.2 - Sistema de Backup/Restore ==========
+    VersionData(
       version: '2.1.2',
       date: '25 Feb 2026',
-      title: 'Sistema de Backup/Restore',
+      title: '💾 Sistema de Backup/Restore',
       cardCorner: CardCorner.soft,
+      gradientColors: [0xFF10B981, 0xFF3B82F6], // Verde a Azul
       changes: [
         ChangeCategory(
           title: '🚀 Nuevas Funcionalidades',
@@ -263,28 +313,15 @@ class _ChangelogScreenState extends State<ChangelogScreen> {
             ),
           ],
         ),
-        ChangeCategory(
-          title: '✨ Mejoras UI/UX',
-          icon: Icons.brush,
-          color: 0xFF2196F3,
-          items: [
-            ChangeItem(
-              description: '📊 Visualización mejorada',
-              subItems: [
-                'Barra de progreso dinámica',
-                'Menú lateral rediseñado',
-              ],
-            ),
-          ],
-        ),
       ],
     ),
-    // VERSIÓN 2.1.1
-    const VersionData(
+    // ========== VERSIÓN 2.1.1 - Perfil del Desarrollador ==========
+    VersionData(
       version: '2.1.1',
       date: '24 Feb 2026',
-      title: 'Perfil del Desarrollador',
+      title: '👤 Perfil del Desarrollador',
       cardCorner: CardCorner.soft,
+      gradientColors: [0xFFF59E0B, 0xFFEF4444], // Naranja a Rojo
       changes: [
         ChangeCategory(
           title: '🚀 Nuevas Funcionalidades',
@@ -301,41 +338,15 @@ class _ChangelogScreenState extends State<ChangelogScreen> {
             ),
           ],
         ),
-        ChangeCategory(
-          title: '✨ Mejoras UI/UX',
-          icon: Icons.brush,
-          color: 0xFF2196F3,
-          items: [
-            ChangeItem(
-              description: '⚡ Optimizaciones',
-              subItems: [
-                'Menús sin lag',
-                'Pantalla de Ajustes simplificada',
-              ],
-            ),
-          ],
-        ),
-        ChangeCategory(
-          title: '🐛 Correcciones',
-          icon: Icons.bug_report,
-          color: 0xFFFF9800,
-          items: [
-            ChangeItem(
-              description: '🔧 Correcciones',
-              subItems: [
-                'Opciones redundantes eliminadas',
-              ],
-            ),
-          ],
-        ),
       ],
     ),
-    // VERSIÓN 2.1.0
-    const VersionData(
+    // ========== VERSIÓN 2.1.0 - Sistema de Seguridad ==========
+    VersionData(
       version: '2.1.0',
       date: '23 Feb 2026',
-      title: 'Sistema de Seguridad',
+      title: '🔐 Sistema de Seguridad',
       cardCorner: CardCorner.soft,
+      gradientColors: [0xFF6366F1, 0xFF8B5CF6], // Indigo a Violeta
       changes: [
         ChangeCategory(
           title: '🚀 Nuevas Funcionalidades',
@@ -352,27 +363,15 @@ class _ChangelogScreenState extends State<ChangelogScreen> {
             ),
           ],
         ),
-        ChangeCategory(
-          title: '✨ Mejoras UI/UX',
-          icon: Icons.brush,
-          color: 0xFF2196F3,
-          items: [
-            ChangeItem(
-              description: '🎨 Mejoras visuales',
-              subItems: [
-                'Splash screen renovado',
-              ],
-            ),
-          ],
-        ),
       ],
     ),
-    // VERSIÓN 2.0.0
-    const VersionData(
+    // ========== VERSIÓN 2.0.0 - Modo Oscuro/Claro ==========
+    VersionData(
       version: '2.0.0',
       date: '22 Feb 2026',
-      title: 'Modo Oscuro/Claro',
+      title: '🌓 Modo Oscuro/Claro',
       cardCorner: CardCorner.soft,
+      gradientColors: [0xFF3B82F6, 0xFF10B981], // Azul a Verde
       changes: [
         ChangeCategory(
           title: '🚀 Nuevas Funcionalidades',
@@ -404,12 +403,13 @@ class _ChangelogScreenState extends State<ChangelogScreen> {
         ),
       ],
     ),
-    // VERSIÓN 1.2.0
-    const VersionData(
+    // ========== VERSIÓN 1.2.0 - Mejoras UI/UX ==========
+    VersionData(
       version: '1.2.0',
       date: '21 Feb 2026',
-      title: 'Mejoras UI/UX',
+      title: '📅 Mejoras UI/UX',
       cardCorner: CardCorner.square,
+      gradientColors: [0xFFEC4899, 0xFFF59E0B], // Rosa a Naranja
       changes: [
         ChangeCategory(
           title: '🚀 Nuevas Funcionalidades',
@@ -430,28 +430,15 @@ class _ChangelogScreenState extends State<ChangelogScreen> {
             ),
           ],
         ),
-        ChangeCategory(
-          title: '✨ Mejoras UI/UX',
-          icon: Icons.brush,
-          color: 0xFF2196F3,
-          items: [
-            ChangeItem(
-              description: '📊 Visualización',
-              subItems: [
-                'Grid de notas con colores',
-                'Pull to refresh mejorado',
-              ],
-            ),
-          ],
-        ),
       ],
     ),
-    // VERSIÓN 1.1.0
-    const VersionData(
+    // ========== VERSIÓN 1.1.0 - Mejoras de Interfaz ==========
+    VersionData(
       version: '1.1.0',
       date: '20 Feb 2026',
-      title: 'Mejoras de Interfaz',
+      title: '✨ Mejoras de Interfaz',
       cardCorner: CardCorner.square,
+      gradientColors: [0xFF8B5CF6, 0xFFEC4899], // Violeta a Rosa
       changes: [
         ChangeCategory(
           title: '🚀 Nuevas Funcionalidades',
@@ -470,35 +457,17 @@ class _ChangelogScreenState extends State<ChangelogScreen> {
                 'Animado y atractivo',
               ],
             ),
-            ChangeItem(
-              description: '🍫 Snackbars',
-              subItems: [
-                'Personalizados (éxito, error, info)',
-              ],
-            ),
-          ],
-        ),
-        ChangeCategory(
-          title: '✨ Mejoras UI/UX',
-          icon: Icons.brush,
-          color: 0xFF2196F3,
-          items: [
-            ChangeItem(
-              description: '🎴 NoteCard',
-              subItems: [
-                'Rediseñado',
-              ],
-            ),
           ],
         ),
       ],
     ),
-    // VERSIÓN 1.0.0
-    const VersionData(
+    // ========== VERSIÓN 1.0.0 - Versión Inicial ==========
+    VersionData(
       version: '1.0.0',
       date: '19 Feb 2026',
-      title: 'Versión Inicial',
+      title: '🎉 Versión Inicial',
       cardCorner: CardCorner.square,
+      gradientColors: [0xFF10B981, 0xFF3B82F6], // Verde a Azul
       changes: [
         ChangeCategory(
           title: '🚀 Primera Versión',
@@ -602,6 +571,10 @@ class _ChangelogScreenState extends State<ChangelogScreen> {
       }
     }
 
+    // Colores del gradiente para la tarjeta
+    final gradientStart = Color(version.gradientColors[0]);
+    final gradientEnd = Color(version.gradientColors[1]);
+
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
@@ -621,7 +594,7 @@ class _ChangelogScreenState extends State<ChangelogScreen> {
         borderRadius: getBorderRadius(),
         border: Border.all(
           color: isLatest
-              ? Colors.purple.withValues(alpha: 0.5)
+              ? gradientStart.withValues(alpha: 0.7)
               : (isDarkMode
                   ? Colors.grey[700]!.withValues(alpha: 0.3)
                   : Colors.grey[400]!.withValues(alpha: 0.2)),
@@ -630,7 +603,7 @@ class _ChangelogScreenState extends State<ChangelogScreen> {
         boxShadow: [
           if (isLatest)
             BoxShadow(
-              color: Colors.purple.withValues(alpha: 0.25),
+              color: gradientStart.withValues(alpha: 0.3),
               blurRadius: 25,
               spreadRadius: 2,
               offset: const Offset(0, 8),
@@ -655,14 +628,12 @@ class _ChangelogScreenState extends State<ChangelogScreen> {
                       padding: const EdgeInsets.all(20),
                       child: Row(
                         children: [
-                          // Badge de versión
+                          // Badge de versión con gradiente
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                             decoration: BoxDecoration(
                               gradient: LinearGradient(
-                                colors: isLatest
-                                    ? [Colors.purple.shade400, Colors.blue.shade400]
-                                    : [Colors.grey.shade500, Colors.grey.shade700],
+                                colors: [gradientStart, gradientEnd],
                                 begin: Alignment.topLeft,
                                 end: Alignment.bottomRight,
                               ),
@@ -716,12 +687,10 @@ class _ChangelogScreenState extends State<ChangelogScreen> {
                             curve: Curves.easeInOut,
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
-                              color: (isLatest ? Colors.purple : (isDarkMode ? Colors.grey[800] : Colors.grey[200]))!.withValues(alpha: 0.2),
+                              color: gradientStart.withValues(alpha: 0.15),
                               shape: BoxShape.circle,
                               border: Border.all(
-                                color: isLatest 
-                                    ? Colors.purple.withValues(alpha: 0.3) 
-                                    : (isDarkMode ? Colors.grey[600]! : Colors.grey[400]!).withValues(alpha: 0.3),
+                                color: gradientStart.withValues(alpha: 0.3),
                                 width: 1,
                               ),
                             ),
@@ -730,7 +699,7 @@ class _ChangelogScreenState extends State<ChangelogScreen> {
                               turns: isExpanded ? 0.5 : 0.0,
                               child: Icon(
                                 Icons.keyboard_arrow_down,
-                                color: isLatest ? Colors.purple : (isDarkMode ? Colors.grey[400] : Colors.grey[600]),
+                                color: gradientStart,
                                 size: 20,
                               ),
                             ),
@@ -758,19 +727,13 @@ class _ChangelogScreenState extends State<ChangelogScreen> {
                               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                               decoration: BoxDecoration(
                                 gradient: LinearGradient(
-                                  colors: isLatest
-                                      ? [Colors.purple.shade50, Colors.blue.shade50]
-                                      : isDarkMode
-                                          ? [Colors.grey[800]!, Colors.grey[700]!]
-                                          : [Colors.grey[100]!, Colors.grey[200]!],
+                                  colors: [gradientStart.withValues(alpha: 0.1), gradientEnd.withValues(alpha: 0.05)],
                                   begin: Alignment.topLeft,
                                   end: Alignment.bottomRight,
                                 ),
                                 borderRadius: BorderRadius.circular(15),
                                 border: Border.all(
-                                  color: isLatest
-                                      ? Colors.purple.withValues(alpha: 0.3)
-                                      : Colors.grey.shade400.withValues(alpha: 0.3),
+                                  color: gradientStart.withValues(alpha: 0.3),
                                   width: 1,
                                 ),
                               ),
@@ -779,15 +742,13 @@ class _ChangelogScreenState extends State<ChangelogScreen> {
                                   Container(
                                     padding: const EdgeInsets.all(6),
                                     decoration: BoxDecoration(
-                                      color: isLatest 
-                                          ? Colors.purple.withValues(alpha: 0.2)
-                                          : (isDarkMode ? Colors.grey[600]!.withValues(alpha: 0.3) : Colors.grey[400]!.withValues(alpha: 0.3)),
+                                      color: gradientStart.withValues(alpha: 0.2),
                                       borderRadius: BorderRadius.circular(8),
                                     ),
                                     child: Icon(
                                       Icons.info_outline,
                                       size: 18,
-                                      color: isLatest ? Colors.purple : (isDarkMode ? Colors.grey[400] : Colors.grey[600]),
+                                      color: gradientStart,
                                     ),
                                   ),
                                   const SizedBox(width: 10),
@@ -797,9 +758,7 @@ class _ChangelogScreenState extends State<ChangelogScreen> {
                                       style: TextStyle(
                                         fontSize: 16,
                                         fontWeight: FontWeight.w600,
-                                        color: isDarkMode 
-                                            ? (isLatest ? Colors.purple.shade200 : Colors.grey[300])
-                                            : (isLatest ? Colors.purple.shade700 : Colors.grey[800]),
+                                        color: gradientStart,
                                       ),
                                     ),
                                   ),
@@ -809,7 +768,7 @@ class _ChangelogScreenState extends State<ChangelogScreen> {
                             
                             // Categorías de cambios
                             ...version.changes.map((category) => 
-                              _buildCategorySection(category, isDarkMode, isLatest)
+                              _buildCategorySection(category, isDarkMode, gradientStart)
                             ),
                             
                             // Versión inicial
@@ -820,14 +779,12 @@ class _ChangelogScreenState extends State<ChangelogScreen> {
                                 decoration: BoxDecoration(
                                   gradient: LinearGradient(
                                     colors: isDarkMode
-                                        ? [Colors.green.shade900.withValues(alpha: 0.3), Colors.green.shade800.withValues(alpha: 0.2)]
-                                        : [Colors.green.shade50, Colors.green.shade100],
+                                        ? [gradientStart.withValues(alpha: 0.2), gradientEnd.withValues(alpha: 0.1)]
+                                        : [gradientStart.withValues(alpha: 0.1), gradientEnd.withValues(alpha: 0.05)],
                                   ),
                                   borderRadius: BorderRadius.circular(15),
                                   border: Border.all(
-                                    color: isDarkMode
-                                        ? Colors.green.shade800.withValues(alpha: 0.3)
-                                        : Colors.green.shade300.withValues(alpha: 0.5),
+                                    color: gradientStart.withValues(alpha: 0.3),
                                   ),
                                 ),
                                 child: Row(
@@ -835,17 +792,17 @@ class _ChangelogScreenState extends State<ChangelogScreen> {
                                     Container(
                                       padding: const EdgeInsets.all(8),
                                       decoration: BoxDecoration(
-                                        color: Colors.green.withValues(alpha: 0.2),
+                                        color: gradientStart.withValues(alpha: 0.2),
                                         shape: BoxShape.circle,
                                       ),
-                                      child: const Icon(
+                                      child: Icon(
                                         Icons.emoji_events,
-                                        color: Colors.green,
+                                        color: gradientStart,
                                         size: 24,
                                       ),
                                     ),
                                     const SizedBox(width: 12),
-                                    const Expanded(
+                                    Expanded(
                                       child: Column(
                                         crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
@@ -854,15 +811,15 @@ class _ChangelogScreenState extends State<ChangelogScreen> {
                                             style: TextStyle(
                                               fontSize: 16,
                                               fontWeight: FontWeight.bold,
-                                              color: Colors.green,
+                                              color: gradientStart,
                                             ),
                                           ),
-                                          SizedBox(height: 4),
+                                          const SizedBox(height: 4),
                                           Text(
                                             'La primera versión de QuickNote 🚀',
                                             style: TextStyle(
                                               fontSize: 13,
-                                              color: Colors.green,
+                                              color: gradientStart,
                                             ),
                                           ),
                                         ],
@@ -891,7 +848,7 @@ class _ChangelogScreenState extends State<ChangelogScreen> {
     );
   }
 
-  Widget _buildCategorySection(ChangeCategory category, bool isDarkMode, bool isLatest) {
+  Widget _buildCategorySection(ChangeCategory category, bool isDarkMode, Color versionColor) {
     return Container(
       margin: const EdgeInsets.only(bottom: 24),
       child: Column(
@@ -1084,6 +1041,7 @@ class VersionData {
   final CardCorner cardCorner;
   final List<ChangeCategory> changes;
   final bool isInitial;
+  final List<int> gradientColors; // Nuevo campo para colores de gradiente
 
   const VersionData({
     required this.version,
@@ -1092,5 +1050,6 @@ class VersionData {
     required this.cardCorner,
     required this.changes,
     this.isInitial = false,
+    required this.gradientColors, // Ahora es requerido
   });
 }

@@ -1,21 +1,359 @@
 import 'package:flutter/material.dart';
 import 'dart:ui';
 import '../models/note.dart';
-import '../models/tag.dart'; // 👈 IMPORTACIÓN AGREGADA
+import '../models/tag.dart';
 import 'package:provider/provider.dart';
 import '../providers/theme_provider.dart';
-import 'tag_notes_screen.dart'; // 👈 IMPORTACIÓN AGREGADA
+import '../providers/note_provider.dart';
+import 'tag_notes_screen.dart';
+// Eliminada importación no utilizada de archived_screen.dart
+import '../utils/snackbar_utils.dart';
 
-class NoteDetailScreen extends StatelessWidget {
+class NoteDetailScreen extends StatefulWidget {
   final Note note;
 
   const NoteDetailScreen({super.key, required this.note});
 
   @override
+  State<NoteDetailScreen> createState() => _NoteDetailScreenState();
+}
+
+class _NoteDetailScreenState extends State<NoteDetailScreen> {
+  late Note _currentNote;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentNote = widget.note;
+  }
+
+  Future<void> _toggleFavorite() async {
+    final noteProvider = Provider.of<NoteProvider>(context, listen: false);
+    final newFavoriteState = !_currentNote.isFavorite;
+    final updatedNote = _currentNote.copyWithFavorite(newFavoriteState);
+    
+    try {
+      await noteProvider.updateNote(updatedNote);
+      
+      if (mounted) {
+        setState(() {
+          _currentNote = updatedNote;
+        });
+        
+        SnackbarUtils.showSuccessSnackbar(
+          context,
+          newFavoriteState 
+              ? '✨ Nota añadida a favoritos' 
+              : 'Nota quitada de favoritos',
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        SnackbarUtils.showErrorSnackbar(
+          context,
+          'Error al actualizar favorito: $e',
+        );
+      }
+    }
+  }
+
+  Future<void> _toggleArchive() async {
+    final noteProvider = Provider.of<NoteProvider>(context, listen: false);
+    final newArchiveState = !_currentNote.isArchived;
+    final updatedNote = _currentNote.copyWithArchived(newArchiveState);
+    
+    try {
+      await noteProvider.updateNote(updatedNote);
+      
+      if (mounted) {
+        setState(() {
+          _currentNote = updatedNote;
+        });
+        
+        if (newArchiveState) {
+          SnackbarUtils.showSuccessSnackbar(
+            context,
+            '📦 Nota archivada',
+          );
+          
+          // Opción para ir a la pantalla de archivadas
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('La nota se ha archivado'),
+              duration: Duration(seconds: 3),
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.vertical(top: Radius.circular(10)),
+              ),
+              margin: EdgeInsets.all(10),
+            ),
+          );
+        } else {
+          SnackbarUtils.showInfoSnackbar(
+            context,
+            'Nota restaurada',
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        SnackbarUtils.showErrorSnackbar(
+          context,
+          'Error al archivar: $e',
+        );
+      }
+    }
+  }
+
+  void _confirmDelete() async {
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    final isDarkMode = themeProvider.isDarkMode;
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(
+          'Eliminar nota',
+          style: TextStyle(
+            color: isDarkMode ? Colors.grey[300] : Colors.black87,
+          ),
+        ),
+        content: Text(
+          '¿Estás seguro de que quieres eliminar esta nota?',
+          style: TextStyle(
+            color: isDarkMode ? Colors.grey[400] : Colors.grey[700],
+          ),
+        ),
+        backgroundColor: isDarkMode ? Colors.grey[900] : Colors.white,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.all(Radius.circular(25)), // CORREGIDO: eliminado const incorrecto
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(
+              'Cancelar',
+              style: TextStyle(
+                color: isDarkMode ? Colors.grey[400] : Colors.grey[700],
+              ),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+              shape: const RoundedRectangleBorder(
+                borderRadius: BorderRadius.all(Radius.circular(10)), // CORREGIDO
+              ),
+            ),
+            child: const Text('Eliminar'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true && mounted) {
+      try {
+        final noteProvider = Provider.of<NoteProvider>(context, listen: false);
+        await noteProvider.deleteNote(widget.note.id);
+        
+        if (mounted) {
+          SnackbarUtils.showSuccessSnackbar(
+            context, 
+            'Nota eliminada',
+          );
+          // Retornar true para indicar que hubo cambios
+          Navigator.pop(context, true);
+        }
+      } catch (e) {
+        if (mounted) {
+          SnackbarUtils.showErrorSnackbar(
+            context, 
+            'Error al eliminar: $e',
+          );
+        }
+      }
+    }
+  }
+
+  void _showOptionsMenu() {
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    final isDarkMode = themeProvider.isDarkMode;
+    final noteColor = _getNoteColor(_currentNote);
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Colors.white.withValues(alpha: 0.95),
+              noteColor.withValues(alpha: 0.2),
+              Colors.white.withValues(alpha: 0.95),
+            ],
+          ),
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
+          boxShadow: [
+            BoxShadow(
+              color: noteColor.withValues(alpha: 0.3),
+              blurRadius: 20,
+              spreadRadius: 0,
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+            child: Container(
+              padding: const EdgeInsets.all(20),
+              color: Colors.white.withValues(alpha: 0.3),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[300],
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  
+                  // Opción de favoritos
+                  _buildModalOption(
+                    icon: _currentNote.isFavorite ? Icons.star : Icons.star_border,
+                    label: _currentNote.isFavorite ? 'Quitar de favoritos' : 'Añadir a favoritos',
+                    color: Colors.amber,
+                    isDarkMode: isDarkMode,
+                    onTap: () {
+                      Navigator.pop(context);
+                      _toggleFavorite();
+                    },
+                  ),
+                  
+                  // Opción de archivar/desarchivar
+                  _buildModalOption(
+                    icon: _currentNote.isArchived ? Icons.unarchive : Icons.archive,
+                    label: _currentNote.isArchived ? 'Desarchivar nota' : 'Archivar nota',
+                    color: Colors.teal,
+                    isDarkMode: isDarkMode,
+                    onTap: () {
+                      Navigator.pop(context);
+                      _toggleArchive();
+                    },
+                  ),
+                  
+                  const Divider(height: 16, thickness: 1, indent: 20, endIndent: 20),
+                  
+                  // Opción de eliminar
+                  _buildModalOption(
+                    icon: Icons.delete_outline,
+                    label: 'Eliminar nota',
+                    color: Colors.red,
+                    isDarkMode: isDarkMode,
+                    showArrow: false,
+                    onTap: () {
+                      Navigator.pop(context);
+                      _confirmDelete();
+                    },
+                  ),
+                  
+                  const SizedBox(height: 20),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildModalOption({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required bool isDarkMode,
+    required VoidCallback onTap,
+    bool showArrow = true,
+  }) {
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 6),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Colors.white.withValues(alpha: 0.7),
+            Colors.white.withValues(alpha: 0.9),
+            color.withValues(alpha: 0.1),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(15),
+        border: Border.all(
+          color: color.withValues(alpha: 0.3),
+          width: 1,
+        ),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(15),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(icon, color: color, size: 20),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Text(
+                    label,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                      color: Color(0xFF424242), // CORREGIDO: Colors.grey[800] no es const
+                    ),
+                  ),
+                ),
+                if (showArrow)
+                  Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: color.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(
+                      Icons.arrow_forward_ios,
+                      color: color,
+                      size: 14,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final isDarkMode = themeProvider.isDarkMode;
-    final noteColor = _getNoteColor(note);
+    final noteColor = _getNoteColor(_currentNote);
 
     return Scaffold(
       backgroundColor: isDarkMode ? Colors.grey[900] : Colors.grey[50],
@@ -35,9 +373,9 @@ class NoteDetailScreen extends StatelessWidget {
           ),
           onPressed: () => Navigator.pop(context),
         ),
-        // 👇 ACCIONES MEJORADAS: Indicadores de archivada y favorito
         actions: [
-          if (note.isArchived)
+          // Indicadores de estado
+          if (_currentNote.isArchived)
             Container(
               margin: const EdgeInsets.only(right: 8),
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -54,7 +392,7 @@ class NoteDetailScreen extends StatelessWidget {
                 ],
               ),
             ),
-          if (note.isFavorite)
+          if (_currentNote.isFavorite)
             Container(
               margin: const EdgeInsets.only(right: 8),
               padding: const EdgeInsets.all(6),
@@ -64,6 +402,27 @@ class NoteDetailScreen extends StatelessWidget {
               ),
               child: const Icon(Icons.star, color: Colors.amber, size: 18),
             ),
+          
+          // Botón de opciones
+          Container(
+            margin: const EdgeInsets.only(right: 8),
+            decoration: BoxDecoration(
+              color: noteColor.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: noteColor.withValues(alpha: 0.3),
+                width: 1,
+              ),
+            ),
+            child: IconButton(
+              icon: Icon(
+                Icons.more_vert,
+                color: noteColor,
+                size: 24,
+              ),
+              onPressed: _showOptionsMenu,
+            ),
+          ),
         ],
         flexibleSpace: ClipRRect(
           child: BackdropFilter(
@@ -142,7 +501,7 @@ class NoteDetailScreen extends StatelessWidget {
                           ),
                           child: Center(
                             child: Text(
-                              _getInitials(note.title),
+                              _getInitials(_currentNote.title),
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 22,
@@ -158,7 +517,7 @@ class NoteDetailScreen extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                note.title,
+                                _currentNote.title,
                                 style: TextStyle(
                                   fontSize: 22,
                                   fontWeight: FontWeight.bold,
@@ -176,7 +535,7 @@ class NoteDetailScreen extends StatelessWidget {
                                   ),
                                   const SizedBox(width: 4),
                                   Text(
-                                    _formatDateTime(note.createdAt),
+                                    _formatDateTime(_currentNote.createdAt),
                                     style: TextStyle(
                                       fontSize: 12,
                                       color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
@@ -257,7 +616,7 @@ class NoteDetailScreen extends StatelessWidget {
                                       ),
                                     ),
                                     Text(
-                                      _formatDateOnly(note.createdAt),
+                                      _formatDateOnly(_currentNote.createdAt),
                                       style: TextStyle(
                                         fontSize: 13,
                                         fontWeight: FontWeight.w500,
@@ -308,7 +667,7 @@ class NoteDetailScreen extends StatelessWidget {
                                       ),
                                     ),
                                     Text(
-                                      _formatTimeOnly(note.createdAt),
+                                      _formatTimeOnly(_currentNote.createdAt),
                                       style: TextStyle(
                                         fontSize: 13,
                                         fontWeight: FontWeight.w500,
@@ -329,7 +688,7 @@ class NoteDetailScreen extends StatelessWidget {
             ),
 
             // ===== TARJETA DE ACTUALIZACIÓN (si existe) =====
-            if (note.updatedAt != null && note.updatedAt != note.createdAt) ...[
+            if (_currentNote.updatedAt != null && _currentNote.updatedAt != _currentNote.createdAt) ...[
               Container(
                 width: double.infinity,
                 margin: const EdgeInsets.only(bottom: 16),
@@ -386,7 +745,7 @@ class NoteDetailScreen extends StatelessWidget {
                                   ),
                                 ),
                                 Text(
-                                  _formatDateTime(note.updatedAt!),
+                                  _formatDateTime(_currentNote.updatedAt!),
                                   style: TextStyle(
                                     fontSize: 13,
                                     fontWeight: FontWeight.w500,
@@ -456,9 +815,9 @@ class NoteDetailScreen extends StatelessWidget {
                                   width: 1,
                                 ),
                               ),
-                              child: Icon(
+                              child: const Icon(
                                 Icons.description,
-                                color: Colors.purple.shade400,
+                                color: Colors.purple,
                                 size: 20,
                               ),
                             ),
@@ -492,7 +851,7 @@ class NoteDetailScreen extends StatelessWidget {
                             ),
                           ),
                           child: Text(
-                            note.content.isEmpty ? 'Sin contenido' : note.content,
+                            _currentNote.content.isEmpty ? 'Sin contenido' : _currentNote.content,
                             style: TextStyle(
                               fontSize: 15,
                               height: 1.6,
@@ -502,12 +861,12 @@ class NoteDetailScreen extends StatelessWidget {
                         ),
 
                         // 👇 ETIQUETAS MEJORADAS con colores y navegación
-                        if (note.tags.isNotEmpty) ...[
+                        if (_currentNote.tags.isNotEmpty) ...[
                           const SizedBox(height: 16),
                           Wrap(
                             spacing: 6,
                             runSpacing: 6,
-                            children: note.tags.map((tag) {
+                            children: _currentNote.tags.map((tag) {
                               final tagColor = Tag.getColorForName(tag);
                               return GestureDetector(
                                 onTap: () {

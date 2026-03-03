@@ -10,9 +10,15 @@ class Note {
   
   // Campos adicionales para mejorar la UI/UX
   bool isFavorite;      // Para marcar notas como favoritas
-  bool isArchived;      // 👈 NUEVO CAMPO - Para notas archivadas (SOLO UNA VEZ)
+  bool isArchived;      // Para notas archivadas
   List<String> tags;    // Para categorizar notas
   String? colorHex;     // Para color personalizado (opcional)
+  
+  // CAMPOS PARA MODO OFFLINE
+  bool isSynced;        // Indica si está sincronizado con el servidor
+  String? localId;      // ID local para notas no sincronizadas
+  bool isPending;       // Pendiente de sincronizar
+  String? lastSyncError; // Error de la última sincronización
 
   Note({
     required this.id,
@@ -22,12 +28,16 @@ class Note {
     this.updatedAt,
     this.deletedAt,
     this.isFavorite = false,
-    this.isArchived = false,      // 👈 NUEVO CAMPO - Por defecto no archivada
+    this.isArchived = false,
     this.tags = const [],
     this.colorHex,
+    this.isSynced = true,
+    this.localId,
+    this.isPending = false,
+    this.lastSyncError,
   });
 
-  // Crear desde JSON (para respuestas GET)
+  // Crear desde JSON (para respuestas GET del servidor)
   factory Note.fromJson(Map<String, dynamic> json) {
     return Note(
       id: json['id'] ?? 0,
@@ -37,31 +47,83 @@ class Note {
       updatedAt: json['updatedAt'] ?? json['updated_at'],
       deletedAt: json['deletedAt'] ?? json['deleted_at'],
       isFavorite: json['isFavorite'] ?? json['is_favorite'] ?? false,
-      isArchived: json['isArchived'] ?? json['is_archived'] ?? false, // 👈 NUEVO CAMPO
+      isArchived: json['isArchived'] ?? json['is_archived'] ?? false,
       tags: json['tags'] != null ? List<String>.from(json['tags']) : [],
       colorHex: json['colorHex'] ?? json['color_hex'],
+      // Por defecto, las notas del servidor están sincronizadas
+      isSynced: true,
+      isPending: false,
+      lastSyncError: null,
     );
   }
 
-  // Convertir a JSON (para POST/PUT)
+  // Crear desde JSON local (para SQLite)
+  factory Note.fromLocalJson(Map<String, dynamic> json) {
+    return Note(
+      id: json['server_id'] ?? 0,
+      title: json['title'] ?? '',
+      content: json['content'] ?? '',
+      createdAt: json['created_at'] ?? DateTime.now().toIso8601String(),
+      updatedAt: json['updated_at'],
+      deletedAt: json['deleted_at'],
+      isFavorite: json['is_favorite'] == 1,
+      isArchived: json['is_archived'] == 1,
+      tags: json['tags'] != null && json['tags'].isNotEmpty
+          ? json['tags'].split(',').where((t) => t.isNotEmpty).toList()
+          : [],
+      colorHex: json['color_hex'],
+      isSynced: json['is_synced'] == 1,
+      localId: json['local_id'],
+      isPending: json['is_pending'] == 1,
+      lastSyncError: json['last_sync_error'],
+    );
+  }
+
+  // Convertir a JSON (para POST/PUT del servidor)
   Map<String, dynamic> toJson() {
     final Map<String, dynamic> data = {
       'title': title,
       'content': content,
     };
     
-    // Incluir isFavorite solo si es necesario para el backend
     data['isFavorite'] = isFavorite;
-    data['isArchived'] = isArchived; // 👈 NUEVO CAMPO
+    data['isArchived'] = isArchived;
     
-    // Incluir tags si existen
     if (tags.isNotEmpty) {
       data['tags'] = tags;
     }
     
+    // No incluimos campos offline en las peticiones al servidor
     return data;
   }
 
+  // ========== MÉTODO toLocalJson CORREGIDO ==========
+  // Convertir a JSON para SQLite - VERSIÓN CORREGIDA
+  Map<String, dynamic> toLocalJson() {
+    final Map<String, dynamic> json = {
+      'server_id': id > 0 ? id : null,
+      'title': title,
+      'content': content,
+      'created_at': createdAt,
+      'updated_at': updatedAt,
+      'deleted_at': deletedAt,
+      'is_favorite': isFavorite ? 1 : 0,
+      'is_archived': isArchived ? 1 : 0,
+      'tags': tags.join(','),
+      'color_hex': colorHex,
+      'is_synced': isSynced ? 1 : 0,
+      'local_id': localId,
+      'is_pending': isPending ? 1 : 0,
+      'last_sync_error': lastSyncError,
+    };
+    
+    // Eliminar campos null para evitar problemas con SQLite
+    json.removeWhere((key, value) => value == null);
+    
+    return json;
+  }
+
+  // ========== MÉTODO COPYWITH ACTUALIZADO ==========
   // Método copyWith para crear copias modificadas
   Note copyWith({
     int? id,
@@ -71,9 +133,13 @@ class Note {
     String? updatedAt,
     String? deletedAt,
     bool? isFavorite,
-    bool? isArchived,  // 👈 NUEVO CAMPO
+    bool? isArchived,
     List<String>? tags,
     String? colorHex,
+    bool? isSynced,
+    String? localId,
+    bool? isPending,
+    String? lastSyncError,
   }) {
     return Note(
       id: id ?? this.id,
@@ -83,13 +149,86 @@ class Note {
       updatedAt: updatedAt ?? this.updatedAt,
       deletedAt: deletedAt ?? this.deletedAt,
       isFavorite: isFavorite ?? this.isFavorite,
-      isArchived: isArchived ?? this.isArchived,  // 👈 NUEVO CAMPO
+      isArchived: isArchived ?? this.isArchived,
       tags: tags ?? this.tags,
       colorHex: colorHex ?? this.colorHex,
+      isSynced: isSynced ?? this.isSynced,
+      localId: localId ?? this.localId,
+      isPending: isPending ?? this.isPending,
+      lastSyncError: lastSyncError ?? this.lastSyncError,
     );
   }
 
-  // Propiedades computadas útiles para la UI
+  // ========== GETTERS Y MÉTODOS DE UTILIDAD PARA OFFLINE ==========
+
+  /// Indica si la nota es offline (no sincronizada)
+  bool get isOffline => !isSynced;
+
+  /// Indica si tiene error de sincronización
+  bool get hasSyncError => lastSyncError != null && lastSyncError!.isNotEmpty;
+
+  /// Indica si la nota está eliminada (en papelera)
+  bool get isDeleted => deletedAt != null;
+
+  /// Obtener ID para la base de datos local (prioriza server_id, luego local_id)
+  String? get dbId => id > 0 ? id.toString() : localId;
+
+  /// Marcar como pendiente de sincronización
+  Note markAsPending() {
+    return copyWith(
+      isPending: true,
+      isSynced: false,
+    );
+  }
+
+  /// Marcar como sincronizada con el servidor
+  Note markAsSynced(int serverId) {
+    return copyWith(
+      id: serverId,
+      isSynced: true,
+      isPending: false,
+      lastSyncError: null,
+    );
+  }
+
+  /// Registrar error de sincronización
+  Note withSyncError(String error) {
+    return copyWith(
+      lastSyncError: error,
+      isPending: true,
+    );
+  }
+
+  /// Generar ID local único para notas offline
+  static String generateLocalId() {
+    return 'local_${DateTime.now().millisecondsSinceEpoch}_${DateTime.now().microsecondsSinceEpoch}';
+  }
+
+  /// Crear una nota offline (nueva, sin sincronizar)
+  factory Note.createOffline({
+    required String title,
+    required String content,
+    bool isFavorite = false,
+    bool isArchived = false,
+    List<String> tags = const [],
+    String? colorHex,
+  }) {
+    return Note(
+      id: 0, // ID temporal, será asignado por el servidor después
+      title: title,
+      content: content,
+      createdAt: DateTime.now().toIso8601String(),
+      isFavorite: isFavorite,
+      isArchived: isArchived,
+      tags: tags,
+      colorHex: colorHex,
+      isSynced: false,
+      localId: generateLocalId(),
+      isPending: true,
+    );
+  }
+
+  // ========== PROPIEDADES COMPUTADAS PARA LA UI ==========
   
   /// Obtener fecha formateada para mostrar (DD/MM/YYYY)
   String get formattedCreatedDate {
@@ -117,11 +256,6 @@ class Note {
   /// Saber si la nota fue actualizada
   bool get isUpdated => updatedAt != null && updatedAt != createdAt;
 
-  /// Saber si la nota está eliminada (en papelera)
-  bool get isDeleted => deletedAt != null;
-
-  // 👈 ELIMINADO: Getter redundante 'isArchived' (ya existe como campo)
-
   /// Obtener extracto del contenido para vista previa
   String get excerpt {
     if (content.length <= 100) return content;
@@ -140,7 +274,7 @@ class Note {
     return null;
   }
 
-  // Métodos de utilidad
+  // ========== MÉTODOS DE UTILIDAD EXISTENTES ==========
 
   /// Verificar si contiene texto (para búsqueda)
   bool contains(String query) {
@@ -212,7 +346,9 @@ class Note {
 
   @override
   String toString() {
-    return 'Note(id: $id, title: $title, favorite: $isFavorite, archived: $isArchived, deleted: $isDeleted, tags: $tags)';
+    return 'Note(id: $id, title: $title, favorite: $isFavorite, archived: $isArchived, '
+        'synced: $isSynced, pending: $isPending, error: $lastSyncError, '
+        'deleted: $isDeleted, tags: $tags)';
   }
 
   @override
@@ -226,8 +362,12 @@ class Note {
         other.updatedAt == updatedAt &&
         other.deletedAt == deletedAt &&
         other.isFavorite == isFavorite &&
-        other.isArchived == isArchived &&  // 👈 NUEVO CAMPO
-        other.colorHex == colorHex;
+        other.isArchived == isArchived &&
+        other.colorHex == colorHex &&
+        other.isSynced == isSynced &&
+        other.localId == localId &&
+        other.isPending == isPending &&
+        other.lastSyncError == lastSyncError;
   }
 
   @override
@@ -240,8 +380,12 @@ class Note {
       updatedAt,
       deletedAt,
       isFavorite,
-      isArchived,  // 👈 NUEVO CAMPO
+      isArchived,
       colorHex,
+      isSynced,
+      localId,
+      isPending,
+      lastSyncError,
     );
   }
 }

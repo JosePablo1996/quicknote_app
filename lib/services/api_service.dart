@@ -10,48 +10,81 @@ class ApiService {
   static const int _maxRetries = 3;
   static const Duration _timeout = Duration(seconds: 30);
   static const Duration _retryDelay = Duration(seconds: 3);
+  
+  // Cache para saber si el servidor está "despierto"
+  static bool _serverIsAwake = false;
+  static DateTime _lastSuccessfulRequest = DateTime.now();
 
-  // Método de prueba para verificar conectividad básica
+  // ========== MÉTODO TEST CONNECTION MEJORADO ==========
   Future<bool> testConnection() async {
+    // Si ya tuvimos una petición exitosa en los últimos 30 segundos, asumimos que está vivo
+    if (_serverIsAwake && DateTime.now().difference(_lastSuccessfulRequest).inSeconds < 30) {
+      debugPrint('🔍 Usando caché de conexión - servidor activo');
+      return true;
+    }
+    
     try {
       debugPrint('🔍 Probando conexión básica...');
-      final url = Uri.parse('https://api-notas-personales.onrender.com');
-      final response = await http.get(url).timeout(const Duration(seconds: 5));
-      debugPrint('✅ Conexión exitosa: ${response.statusCode}');
-      return true;
+      final url = Uri.parse('${Constants.baseUrl}${Constants.notesEndpoint}');
+      
+      // Hacer un GET rápido con timeout corto
+      final response = await http
+          .get(url, headers: Constants.headers)
+          .timeout(const Duration(seconds: 8)); // Timeout más corto para test
+      
+      final success = response.statusCode == 200;
+      
+      if (success) {
+        debugPrint('✅ Conexión exitosa: ${response.statusCode}');
+        _serverIsAwake = true;
+        _lastSuccessfulRequest = DateTime.now();
+      }
+      
+      return success;
+      
     } on SocketException catch (e) {
-      debugPrint('❌ SocketException: $e');
-      debugPrint('   Posibles causas: Sin internet, DNS no resuelve, o firewall');
+      debugPrint('❌ SocketException: $e - Sin conexión a internet');
+      _serverIsAwake = false;
       return false;
+      
     } on TimeoutException catch (e) {
-      debugPrint('❌ TimeoutException: $e');
-      debugPrint('   El servidor tarda demasiado en responder');
+      debugPrint('⚠️ TimeoutException: $e - Servidor podría estar \"durmiendo\"');
+      // NO marcamos como offline, solo devolvemos false para que la operación principal intente
       return false;
+      
     } catch (e) {
       debugPrint('❌ Error desconocido: $e');
       return false;
     }
   }
 
-  // GET /notes - Obtener todas las notas
+  // ========== GET NOTES MEJORADO ==========
   Future<List<Note>> getNotes() async {
     debugPrint('🔵 ===== INICIANDO GET NOTES CON REINTENTOS =====');
     
-    // Primero probar conexión básica
-    final hasConnection = await testConnection();
-    if (!hasConnection) {
-      debugPrint('⚠️ No hay conexión al servidor. Abortando GET.');
-      throw Exception('No hay conexión al servidor. Verifica tu internet.');
+    // NO abortamos por testConnection, dejamos que la operación principal intente
+    bool hasConnection = false;
+    try {
+      hasConnection = await testConnection().timeout(const Duration(seconds: 5));
+    } catch (e) {
+      debugPrint('⚠️ Test de conexión rápido falló, pero continuando con GET...');
     }
     
     for (int attempt = 1; attempt <= _maxRetries; attempt++) {
+      final client = http.Client();
+      
       try {
         debugPrint('📡 Intento $attempt de $_maxRetries');
         
-        final url = Uri.parse('${Constants.baseUrl}${Constants.notesEndpoint}');
+        String endpoint = Constants.notesEndpoint;
+        if (!endpoint.startsWith('/')) {
+          endpoint = '/$endpoint';
+        }
+        
+        final url = Uri.parse('${Constants.baseUrl}$endpoint');
         debugPrint('📡 GET URL: $url');
         
-        final response = await http
+        final response = await client
             .get(url, headers: Constants.headers)
             .timeout(_timeout);
 
@@ -60,6 +93,11 @@ class ApiService {
         if (response.statusCode == 200) {
           List<dynamic> jsonList = json.decode(response.body);
           debugPrint('✅ GET Éxito: ${jsonList.length} notas encontradas');
+          
+          // Actualizar caché de conexión
+          _serverIsAwake = true;
+          _lastSuccessfulRequest = DateTime.now();
+          
           return jsonList.map((json) => Note.fromJson(json)).toList();
         } else {
           debugPrint('❌ GET Error Status: ${response.statusCode}');
@@ -72,15 +110,16 @@ class ApiService {
           }
           throw Exception('Error ${response.statusCode}: ${response.body}');
         }
+        
       } on SocketException catch (e) {
         debugPrint('📶 Error de red en intento $attempt: $e');
-        debugPrint('   Detalles: No se puede resolver el host o conectar');
         
         if (attempt < _maxRetries) {
           debugPrint('🔄 Esperando $_retryDelay antes de reintentar...');
           await Future.delayed(_retryDelay);
           continue;
         }
+        _serverIsAwake = false;
         throw Exception('No hay conexión a internet. Verifica tu red.');
         
       } on TimeoutException catch (e) {
@@ -91,6 +130,7 @@ class ApiService {
           await Future.delayed(_retryDelay);
           continue;
         }
+        // Timeout no significa necesariamente offline, el servidor puede estar lento
         throw Exception('Tiempo de espera agotado. El servidor está tardando en responder.');
         
       } catch (e) {
@@ -102,13 +142,16 @@ class ApiService {
           continue;
         }
         throw Exception('Error de conexión: $e');
+        
+      } finally {
+        client.close();
       }
     }
     
     throw Exception('No se pudo conectar después de $_maxRetries intentos');
   }
 
-  // POST /notes - Crear nota
+  // ========== CREATE NOTE MEJORADO ==========
   Future<Note> createNote(
     String title, 
     String content, {
@@ -117,14 +160,6 @@ class ApiService {
   }) async {
     debugPrint('🟢 ===== INICIANDO CREATE NOTE CON REINTENTOS =====');
     debugPrint('📝 Creando nota - Título: $title');
-    debugPrint('   Tags recibidos del provider: $tags');
-    
-    // Primero probar conexión básica
-    final hasConnection = await testConnection();
-    if (!hasConnection) {
-      debugPrint('⚠️ No hay conexión al servidor. Abortando CREATE.');
-      throw Exception('No hay conexión al servidor. Verifica tu internet.');
-    }
     
     for (int attempt = 1; attempt <= _maxRetries; attempt++) {
       final client = http.Client();
@@ -133,8 +168,8 @@ class ApiService {
         debugPrint('📡 Intento $attempt de $_maxRetries');
         
         String endpoint = Constants.notesEndpoint;
-        if (endpoint.endsWith('/')) {
-          endpoint = endpoint.substring(0, endpoint.length - 1);
+        if (!endpoint.startsWith('/')) {
+          endpoint = '/$endpoint';
         }
         
         final url = Uri.parse('${Constants.baseUrl}$endpoint');
@@ -146,14 +181,10 @@ class ApiService {
         
         if (tags != null && tags.isNotEmpty) {
           bodyMap['tags'] = tags;
-          debugPrint('   ✅ Incluyendo tags en la petición: $tags');
-        } else {
-          debugPrint('   ℹ️ No hay tags para incluir');
         }
         
         if (isFavorite != null) {
-          bodyMap['is_favorite'] = isFavorite; // 👈 CAMBIADO
-          debugPrint('   ✅ Incluyendo is_favorite: $isFavorite');
+          bodyMap['is_favorite'] = isFavorite;
         }
         
         final body = json.encode(bodyMap);
@@ -165,7 +196,8 @@ class ApiService {
             .post(url, headers: Constants.headers, body: body)
             .timeout(_timeout);
 
-        if (response.statusCode == 307) {
+        // Manejar redirects (como en tu caso)
+        if (response.statusCode == 307 || response.statusCode == 308) {
           final location = response.headers['location'];
           if (location != null) {
             debugPrint('🔄 Redirect detectado. Siguiendo a: $location');
@@ -178,7 +210,11 @@ class ApiService {
         if (response.statusCode == 201 || response.statusCode == 200) {
           final note = Note.fromJson(json.decode(response.body));
           debugPrint('✅ POST Éxito: Nota creada con ID: ${note.id}');
-          debugPrint('   Tags en la respuesta del servidor: ${note.tags}');
+          
+          // ¡IMPORTANTE! Actualizar caché de conexión
+          _serverIsAwake = true;
+          _lastSuccessfulRequest = DateTime.now();
+          
           return note;
         } else {
           debugPrint('❌ POST Error Status: ${response.statusCode}');
@@ -194,14 +230,14 @@ class ApiService {
         
       } on SocketException catch (e) {
         debugPrint('📶 Error de red en intento $attempt: $e');
-        debugPrint('   Detalles: No se puede resolver el host o conectar');
         
         if (attempt < _maxRetries) {
           debugPrint('🔄 Esperando $_retryDelay antes de reintentar...');
           await Future.delayed(_retryDelay);
           continue;
         }
-        throw Exception('No hay conexión a internet. Verifica tu red.');
+        _serverIsAwake = false;
+        throw Exception('No hay conexión a internet.');
         
       } on TimeoutException catch (e) {
         debugPrint('⏱️ Timeout en intento $attempt: $e');
@@ -211,6 +247,7 @@ class ApiService {
           await Future.delayed(_retryDelay);
           continue;
         }
+        // Timeout no significa offline, solo que el servidor tardó
         throw Exception('Tiempo de espera agotado. El servidor está tardando en responder.');
         
       } catch (e) {
@@ -231,7 +268,7 @@ class ApiService {
     throw Exception('No se pudo crear la nota después de $_maxRetries intentos');
   }
 
-  // PUT /notes/{id} - Actualizar nota
+  // ========== UPDATE NOTE MEJORADO ==========
   Future<Note> updateNote(
     int id, 
     String title, 
@@ -241,9 +278,6 @@ class ApiService {
   }) async {
     debugPrint('🟡 ===== INICIANDO UPDATE NOTE CON REINTENTOS =====');
     debugPrint('📝 Actualizando nota ID: $id');
-    debugPrint('   Título: $title');
-    debugPrint('   isFavorite: $isFavorite');
-    debugPrint('   Tags: $tags');
     
     for (int attempt = 1; attempt <= _maxRetries; attempt++) {
       final client = http.Client();
@@ -252,8 +286,8 @@ class ApiService {
         debugPrint('📡 Intento $attempt de $_maxRetries');
         
         String endpoint = Constants.notesEndpoint;
-        if (endpoint.endsWith('/')) {
-          endpoint = endpoint.substring(0, endpoint.length - 1);
+        if (!endpoint.startsWith('/')) {
+          endpoint = '/$endpoint';
         }
         
         final url = Uri.parse('${Constants.baseUrl}$endpoint/$id');
@@ -264,7 +298,7 @@ class ApiService {
         };
         
         if (isFavorite != null) {
-          bodyMap['is_favorite'] = isFavorite; // 👈 CAMBIADO
+          bodyMap['is_favorite'] = isFavorite;
         }
         
         if (tags != null && tags.isNotEmpty) {
@@ -280,7 +314,7 @@ class ApiService {
             .put(url, headers: Constants.headers, body: body)
             .timeout(_timeout);
 
-        if (response.statusCode == 307) {
+        if (response.statusCode == 307 || response.statusCode == 308) {
           final location = response.headers['location'];
           if (location != null) {
             debugPrint('🔄 Redirect detectado. Siguiendo a: $location');
@@ -292,10 +326,12 @@ class ApiService {
 
         if (response.statusCode == 200) {
           debugPrint('✅ PUT Éxito');
-          final updatedNote = Note.fromJson(json.decode(response.body));
-          debugPrint('📝 Nota actualizada - isFavorite: ${updatedNote.isFavorite}');
-          debugPrint('   Tags: ${updatedNote.tags}');
-          return updatedNote;
+          
+          // Actualizar caché de conexión
+          _serverIsAwake = true;
+          _lastSuccessfulRequest = DateTime.now();
+          
+          return Note.fromJson(json.decode(response.body));
         } else {
           debugPrint('❌ PUT Error Status: ${response.statusCode}');
           debugPrint('❌ PUT Error Body: ${response.body}');
@@ -326,6 +362,7 @@ class ApiService {
           await Future.delayed(_retryDelay);
           continue;
         }
+        _serverIsAwake = false;
         throw Exception('No hay conexión a internet.');
         
       } catch (e) {
@@ -346,7 +383,7 @@ class ApiService {
     throw Exception('No se pudo actualizar la nota después de $_maxRetries intentos');
   }
 
-  // DELETE /notes/{id} - Eliminar nota
+  // ========== DELETE NOTE MEJORADO ==========
   Future<void> deleteNote(int id) async {
     debugPrint('🔴 ===== INICIANDO DELETE NOTE CON REINTENTOS =====');
     
@@ -357,8 +394,8 @@ class ApiService {
         debugPrint('📡 Intento $attempt de $_maxRetries');
         
         String endpoint = Constants.notesEndpoint;
-        if (endpoint.endsWith('/')) {
-          endpoint = endpoint.substring(0, endpoint.length - 1);
+        if (!endpoint.startsWith('/')) {
+          endpoint = '/$endpoint';
         }
         
         final url = Uri.parse('${Constants.baseUrl}$endpoint/$id');
@@ -368,7 +405,7 @@ class ApiService {
             .delete(url, headers: Constants.headers)
             .timeout(_timeout);
 
-        if (response.statusCode == 307) {
+        if (response.statusCode == 307 || response.statusCode == 308) {
           final location = response.headers['location'];
           if (location != null) {
             debugPrint('🔄 Redirect detectado. Siguiendo a: $location');
@@ -378,8 +415,13 @@ class ApiService {
           }
         }
 
-        if (response.statusCode == 204) {
+        if (response.statusCode == 204 || response.statusCode == 200) {
           debugPrint('✅ DELETE exitoso');
+          
+          // Actualizar caché de conexión
+          _serverIsAwake = true;
+          _lastSuccessfulRequest = DateTime.now();
+          
           return;
         } else {
           debugPrint('❌ DELETE Error Status: ${response.statusCode}');
@@ -410,6 +452,7 @@ class ApiService {
           await Future.delayed(_retryDelay);
           continue;
         }
+        _serverIsAwake = false;
         throw Exception('No hay conexión a internet.');
         
       } catch (e) {

@@ -7,6 +7,7 @@ import '../widgets/empty_notes_widget.dart';
 import '../widgets/custom_header.dart';
 import '../widgets/note_menu.dart';
 import '../widgets/left_menu.dart';
+import '../widgets/connection_status.dart'; // 👈 NUEVO IMPORT
 import '../providers/theme_provider.dart';
 import '../utils/snackbar_utils.dart';
 import 'note_form_screen.dart';
@@ -23,7 +24,6 @@ class NoteListScreen extends StatefulWidget {
 
 class _NoteListScreenState extends State<NoteListScreen>
     with TickerProviderStateMixin {
-  List<Note> _notes = [];
   bool _isLoading = false;
   final TextEditingController _searchController = TextEditingController();
   String _selectedCategory = 'Todas';
@@ -108,20 +108,7 @@ class _NoteListScreenState extends State<NoteListScreen>
       
       if (mounted) {
         setState(() {
-          // Filtrar notas no eliminadas Y no archivadas para la lista principal
-          _notes = noteProvider.notes
-              .where((note) => !note.isDeleted && !note.isArchived)
-              .toList();
           _isLoading = false;
-          debugPrint('📋 Notas cargadas en lista principal: ${_notes.length}');
-          
-          // Si la categoría seleccionada ya no existe (porque se eliminó), volver a "Todas"
-          if (_selectedCategory != 'Todas') {
-            final categoryExists = _notes.any((note) => note.tags.contains(_selectedCategory));
-            if (!categoryExists) {
-              _selectedCategory = 'Todas';
-            }
-          }
         });
       }
     } catch (e) {
@@ -130,6 +117,28 @@ class _NoteListScreenState extends State<NoteListScreen>
         SnackbarUtils.showErrorSnackbar(
           context,
           'Error al cargar notas: $e',
+        );
+      }
+    }
+  }
+
+  // Función de sincronización
+  Future<void> _syncNotes() async {
+    final noteProvider = Provider.of<NoteProvider>(context, listen: false);
+    
+    try {
+      await noteProvider.loadNotes();
+      if (mounted) {
+        SnackbarUtils.showSuccessSnackbar(
+          context,
+          'Notas sincronizadas correctamente',
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        SnackbarUtils.showErrorSnackbar(
+          context,
+          'Error al sincronizar: $e',
         );
       }
     }
@@ -184,8 +193,15 @@ class _NoteListScreenState extends State<NoteListScreen>
     });
   }
 
-  Future<void> _deleteSelectedNotes() async {
-    if (_selectedNoteIds.isEmpty) return;
+  // Función de eliminación múltiple
+  Future<void> _deleteSelectedNotes(NoteProvider noteProvider) async {
+    if (_selectedNoteIds.isEmpty) {
+      SnackbarUtils.showInfoSnackbar(
+        context,
+        'No hay notas seleccionadas. Mantén presionada una nota para seleccionar.',
+      );
+      return;
+    }
     
     final confirm = await showDialog<bool>(
       context: context,
@@ -215,8 +231,6 @@ class _NoteListScreenState extends State<NoteListScreen>
     if (!mounted) return;
 
     if (confirm == true) {
-      final noteProvider = Provider.of<NoteProvider>(context, listen: false);
-      
       setState(() => _isLoading = true);
       
       try {
@@ -225,8 +239,11 @@ class _NoteListScreenState extends State<NoteListScreen>
         }
         
         if (mounted) {
-          await _loadNotesFromProvider();
-          _exitSelectionMode();
+          await noteProvider.loadNotes();
+          setState(() {
+            _isLoading = false;
+            _exitSelectionMode();
+          });
           
           SnackbarUtils.showSuccessSnackbar(
             context,
@@ -245,7 +262,8 @@ class _NoteListScreenState extends State<NoteListScreen>
     }
   }
 
-  Future<void> _deleteNote(Note note) async {
+  // Función de eliminación individual
+  Future<void> _deleteNote(NoteProvider noteProvider, Note note) async {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -278,8 +296,6 @@ class _NoteListScreenState extends State<NoteListScreen>
     );
 
     if (confirm != true || !mounted) return;
-
-    final noteProvider = Provider.of<NoteProvider>(context, listen: false);
     
     setState(() => _isLoading = true);
     
@@ -287,7 +303,8 @@ class _NoteListScreenState extends State<NoteListScreen>
       final success = await noteProvider.deleteNote(note.id);
       
       if (success && mounted) {
-        await _loadNotesFromProvider();
+        await noteProvider.loadNotes();
+        setState(() => _isLoading = false);
         
         SnackbarUtils.showSuccessSnackbar(
           context, 
@@ -306,8 +323,7 @@ class _NoteListScreenState extends State<NoteListScreen>
   }
 
   // Función para añadir/quitar favoritos
-  Future<void> _toggleFavorite(Note note) async {
-    final noteProvider = Provider.of<NoteProvider>(context, listen: false);
+  Future<void> _toggleFavorite(NoteProvider noteProvider, Note note) async {
     final newFavoriteState = !note.isFavorite;
     final updatedNote = note.copyWithFavorite(newFavoriteState);
     
@@ -315,9 +331,6 @@ class _NoteListScreenState extends State<NoteListScreen>
       await noteProvider.updateNote(updatedNote);
       
       if (mounted) {
-        // Forzar recarga completa para actualizar la lista
-        await _loadNotesFromProvider();
-        
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Row(
@@ -404,21 +417,14 @@ class _NoteListScreenState extends State<NoteListScreen>
   }
 
   // Función para archivar/desarchivar notas
-  Future<void> _toggleArchive(Note note) async {
-    final noteProvider = Provider.of<NoteProvider>(context, listen: false);
+  Future<void> _toggleArchive(NoteProvider noteProvider, Note note) async {
     final newArchiveState = !note.isArchived;
     final updatedNote = note.copyWithArchived(newArchiveState);
     
     try {
-      debugPrint('📦 Archivando nota ${note.id} - nuevo estado: $newArchiveState');
-      
       await noteProvider.updateNote(updatedNote);
       
       if (mounted) {
-        // FORZAR RECARGA COMPLETA DE NOTAS DESDE EL PROVIDER
-        await _loadNotesFromProvider();
-        
-        // Mostrar notificación
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Row(
@@ -487,7 +493,7 @@ class _NoteListScreenState extends State<NoteListScreen>
     }
   }
 
-  void _showNoteOptions(Note note, Color noteColor) {
+  void _showNoteOptions(NoteProvider noteProvider, Note note, Color noteColor) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -598,7 +604,7 @@ class _NoteListScreenState extends State<NoteListScreen>
                     color: Colors.amber,
                     onTap: () {
                       Navigator.pop(context);
-                      _toggleFavorite(note);
+                      _toggleFavorite(noteProvider, note);
                     },
                   ),
                   
@@ -609,7 +615,7 @@ class _NoteListScreenState extends State<NoteListScreen>
                     color: Colors.teal,
                     onTap: () {
                       Navigator.pop(context);
-                      _toggleArchive(note);
+                      _toggleArchive(noteProvider, note);
                     },
                   ),
                   
@@ -628,7 +634,7 @@ class _NoteListScreenState extends State<NoteListScreen>
                     color: Colors.red,
                     onTap: () {
                       Navigator.pop(context);
-                      _deleteNote(note);
+                      _deleteNote(noteProvider, note);
                     },
                   ),
                 ],
@@ -739,7 +745,8 @@ class _NoteListScreenState extends State<NoteListScreen>
       ),
     );
     if (result == true && mounted) {
-      _loadNotesFromProvider();
+      final noteProvider = Provider.of<NoteProvider>(context, listen: false);
+      await noteProvider.loadNotes();
     }
   }
 
@@ -753,26 +760,12 @@ class _NoteListScreenState extends State<NoteListScreen>
     );
   }
 
-  void _onSelect() {
-    setState(() {
-      _isSelectionMode = true;
-    });
-    SnackbarUtils.showInfoSnackbar(
-      context,
-      'Modo selección activado',
-    );
-  }
-
   void _onSort() {
     _showSortDialog();
   }
 
   void _onSync() {
-    SnackbarUtils.showInfoSnackbar(
-      context,
-      'Sincronizando notas...',
-    );
-    _loadNotesFromProvider();
+    _syncNotes();
   }
 
   void _showSortDialog() {
@@ -860,7 +853,7 @@ class _NoteListScreenState extends State<NoteListScreen>
     return colors[note.id % colors.length];
   }
 
-  // Widget para el punto de notificación parpadeante
+  // Widget para el punto de notificación parpadeante (favoritos)
   Widget _buildBlinkingNotification() {
     return AnimatedBuilder(
       animation: _favoriteBlinkController,
@@ -888,26 +881,65 @@ class _NoteListScreenState extends State<NoteListScreen>
     );
   }
 
+  // 👇 NUEVO: Widget para indicador de estado offline
+  Widget _buildOfflineIndicator(Note note) {
+    if (note.isSynced) return const SizedBox.shrink();
+    
+    return Positioned(
+      top: 8,
+      left: 8,
+      child: Tooltip(
+        message: note.hasSyncError
+            ? 'Error de sincronización: ${note.lastSyncError}'
+            : 'Pendiente de sincronizar',
+        child: Container(
+          padding: const EdgeInsets.all(4),
+          decoration: BoxDecoration(
+            color: note.hasSyncError
+                ? Colors.red.withValues(alpha: 0.2)
+                : Colors.orange.withValues(alpha: 0.2),
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: note.hasSyncError ? Colors.red : Colors.orange,
+              width: 1.5,
+            ),
+          ),
+          child: Icon(
+            note.hasSyncError ? Icons.error_outline : Icons.sync_problem,
+            color: note.hasSyncError ? Colors.red : Colors.orange,
+            size: 14,
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildGridCard(Note note, String initials, Color noteColor, bool isDarkMode) {
     return GestureDetector(
       onTap: _isSelectionMode
           ? () => _toggleNoteSelection(note.id)
-          : () {
-              Navigator.push(
+          : () async {
+              final result = await Navigator.push(
                 context,
-                PageRouteBuilder(
-                  pageBuilder: (_, __, ___) => NoteDetailScreen(note: note),
-                  transitionsBuilder: (_, animation, __, child) {
-                    return FadeTransition(
-                      opacity: animation,
-                      child: child,
-                    );
-                  },
-                  transitionDuration: const Duration(milliseconds: 300),
+                MaterialPageRoute(
+                  builder: (context) => NoteDetailScreen(note: note),
                 ),
               );
+              if (result == true && mounted) {
+                final noteProvider = Provider.of<NoteProvider>(context, listen: false);
+                await noteProvider.loadNotes();
+              }
             },
-      onLongPress: () => _showNoteOptions(note, noteColor),
+      onLongPress: () {
+        if (!_isSelectionMode) {
+          setState(() {
+            _isSelectionMode = true;
+            _selectedNoteIds.add(note.id);
+          });
+        } else {
+          _toggleNoteSelection(note.id);
+        }
+      },
       child: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
@@ -936,6 +968,7 @@ class _NoteListScreenState extends State<NoteListScreen>
         ),
         child: Stack(
           children: [
+            // Indicador de selección
             if (_isSelectionMode && _selectedNoteIds.contains(note.id))
               Positioned(
                 top: 8,
@@ -953,6 +986,9 @@ class _NoteListScreenState extends State<NoteListScreen>
                   ),
                 ),
               ),
+            
+            // 👇 NUEVO: Indicador de estado offline
+            _buildOfflineIndicator(note),
             
             // Indicador de favorito (LED parpadeante)
             if (note.isFavorite)
@@ -1029,22 +1065,28 @@ class _NoteListScreenState extends State<NoteListScreen>
     return GestureDetector(
       onTap: _isSelectionMode
           ? () => _toggleNoteSelection(note.id)
-          : () {
-              Navigator.push(
+          : () async {
+              final result = await Navigator.push(
                 context,
-                PageRouteBuilder(
-                  pageBuilder: (_, __, ___) => NoteDetailScreen(note: note),
-                  transitionsBuilder: (_, animation, __, child) {
-                    return FadeTransition(
-                      opacity: animation,
-                      child: child,
-                    );
-                  },
-                  transitionDuration: const Duration(milliseconds: 300),
+                MaterialPageRoute(
+                  builder: (context) => NoteDetailScreen(note: note),
                 ),
               );
+              if (result == true && mounted) {
+                final noteProvider = Provider.of<NoteProvider>(context, listen: false);
+                await noteProvider.loadNotes();
+              }
             },
-      onLongPress: () => _showNoteOptions(note, noteColor),
+      onLongPress: () {
+        if (!_isSelectionMode) {
+          setState(() {
+            _isSelectionMode = true;
+            _selectedNoteIds.add(note.id);
+          });
+        } else {
+          _toggleNoteSelection(note.id);
+        }
+      },
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
         decoration: BoxDecoration(
@@ -1166,6 +1208,9 @@ class _NoteListScreenState extends State<NoteListScreen>
               ),
             ),
             
+            // 👇 NUEVO: Indicador de estado offline
+            _buildOfflineIndicator(note),
+            
             // Indicador de favorito (LED parpadeante)
             if (note.isFavorite)
               Positioned(
@@ -1179,7 +1224,7 @@ class _NoteListScreenState extends State<NoteListScreen>
     );
   }
 
-  // Widget para el FAB animado
+  // Widget para el FAB con menú
   Widget _buildAnimatedFAB() {
     return AnimatedBuilder(
       animation: _fabAnimationController,
@@ -1193,31 +1238,7 @@ class _NoteListScreenState extends State<NoteListScreen>
         );
       },
       child: FloatingActionButton(
-        onPressed: _isSelectionMode || _isLoading
-            ? null
-            : () async {
-                await _fabAnimationController.animateTo(0.0,
-                    duration: const Duration(milliseconds: 200));
-                
-                final result = await Navigator.push(
-                  context,
-                  PageRouteBuilder(
-                    pageBuilder: (_, __, ___) => const NoteFormScreen(),
-                    transitionsBuilder: (_, animation, __, child) {
-                      return ScaleTransition(
-                        scale: animation,
-                        child: child,
-                      );
-                    },
-                  ),
-                );
-                
-                _fabAnimationController.repeat(reverse: true);
-                
-                if (result == true && mounted) {
-                  _loadNotesFromProvider();
-                }
-              },
+        onPressed: _isLoading ? null : _showFabMenu,
         backgroundColor: _isSelectionMode || _isLoading ? Colors.grey : Colors.blue,
         foregroundColor: Colors.white,
         elevation: 8,
@@ -1225,7 +1246,193 @@ class _NoteListScreenState extends State<NoteListScreen>
           borderRadius: BorderRadius.circular(16),
         ),
         child: const Icon(Icons.add),
-        tooltip: 'Agregar nota',
+        tooltip: 'Opciones',
+      ),
+    );
+  }
+
+  // Menú del FAB
+  void _showFabMenu() {
+    final noteProvider = Provider.of<NoteProvider>(context, listen: false);
+    
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Colors.white.withValues(alpha: 0.95),
+              Colors.blue.withValues(alpha: 0.2),
+              Colors.white.withValues(alpha: 0.95),
+            ],
+          ),
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.blue.withValues(alpha: 0.3),
+              blurRadius: 20,
+              spreadRadius: 0,
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+            child: Container(
+              padding: const EdgeInsets.all(20),
+              color: Colors.white.withValues(alpha: 0.3),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[300],
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  
+                  // Opción: Crear nueva nota
+                  _buildFabOption(
+                    icon: Icons.note_add,
+                    label: 'Crear nueva nota',
+                    color: Colors.blue,
+                    onTap: () async {
+                      Navigator.pop(context);
+                      final result = await Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const NoteFormScreen(),
+                        ),
+                      );
+                      if (result == true && mounted) {
+                        await noteProvider.loadNotes();
+                      }
+                    },
+                  ),
+                  
+                  const SizedBox(height: 12),
+                  
+                  // Opción: Eliminar múltiples notas
+                  _buildFabOption(
+                    icon: Icons.delete_sweep,
+                    label: 'Eliminar notas seleccionadas',
+                    color: Colors.red,
+                    onTap: () {
+                      Navigator.pop(context);
+                      _deleteSelectedNotes(noteProvider);
+                    },
+                  ),
+                  
+                  const SizedBox(height: 20),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Widget para las opciones del FAB
+  Widget _buildFabOption({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: isDarkMode
+              ? [
+                  Colors.grey[800]!.withValues(alpha: 0.5),
+                  Colors.grey[700]!.withValues(alpha: 0.3),
+                ]
+              : [
+                  Colors.white.withValues(alpha: 0.9),
+                  Colors.grey[50]!.withValues(alpha: 0.7),
+                ],
+        ),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: color.withValues(alpha: 0.3),
+          width: 1.5,
+        ),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(20),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: onTap,
+              borderRadius: BorderRadius.circular(20),
+              splashColor: color.withValues(alpha: 0.2),
+              highlightColor: color.withValues(alpha: 0.1),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            color.withValues(alpha: 0.2),
+                            color.withValues(alpha: 0.05),
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(15),
+                        border: Border.all(
+                          color: color.withValues(alpha: 0.3),
+                          width: 1,
+                        ),
+                      ),
+                      child: Icon(icon, color: color, size: 22),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Text(
+                        label,
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: isDarkMode ? Colors.grey[200] : Colors.grey[800],
+                        ),
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: color.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Icon(
+                        Icons.arrow_forward_ios,
+                        color: color,
+                        size: 14,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -1242,115 +1449,144 @@ class _NoteListScreenState extends State<NoteListScreen>
       floatingActionButton: _buildAnimatedFAB(),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       body: SafeArea(
-        child: Column(
-          children: [
-            CustomHeader(
-              selectedCategory: _selectedCategory,
-              onCategorySelected: (category) {
-                setState(() {
-                  _selectedCategory = category;
-                });
-                SnackbarUtils.showInfoSnackbar(
-                  context,
-                  category == 'Todas' 
-                      ? 'Mostrando todas las notas'
-                      : 'Filtrando por etiqueta: $category',
-                );
-              },
-              onLeftMenuTap: _openLeftMenu,
-              onRightMenuTap: () {
-                showDialog(
-                  context: context,
-                  barrierDismissible: true,
-                  barrierColor: Colors.black.withValues(alpha: 0.3),
-                  builder: (context) => Dialog(
-                    backgroundColor: Colors.transparent,
-                    elevation: 0,
-                    insetPadding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: NoteMenu(
-                      onViewList: _onViewList,
-                      onSelect: _onSelect,
-                      onSort: _onSort,
-                      onSync: _onSync,
-                      onImport: () {},
-                    ),
-                  ),
-                );
-              },
-            ),
+        child: Consumer<NoteProvider>(
+          builder: (context, noteProvider, child) {
+            final notes = noteProvider.notes
+                .where((note) => !note.isDeleted && !note.isArchived)
+                .toList();
             
-            if (_isSelectionMode)
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                color: Colors.blue,
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        '${_selectedNoteIds.length} notas seleccionadas',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
+            // Si la categoría seleccionada ya no existe, volver a "Todas"
+            if (_selectedCategory != 'Todas') {
+              final categoryExists = notes.any((note) => note.tags.contains(_selectedCategory));
+              if (!categoryExists) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (mounted) {
+                    setState(() {
+                      _selectedCategory = 'Todas';
+                    });
+                  }
+                });
+              }
+            }
+            
+            return Column(
+              children: [
+                // 👇 NUEVO: Barra de estado de conexión
+                const ConnectionStatus(),
+                
+                CustomHeader(
+                  selectedCategory: _selectedCategory,
+                  onCategorySelected: (category) {
+                    setState(() {
+                      _selectedCategory = category;
+                    });
+                    SnackbarUtils.showInfoSnackbar(
+                      context,
+                      category == 'Todas' 
+                          ? 'Mostrando todas las notas'
+                          : 'Filtrando por etiqueta: $category',
+                    );
+                  },
+                  onLeftMenuTap: _openLeftMenu,
+                  onRightMenuTap: () {
+                    showDialog(
+                      context: context,
+                      barrierDismissible: true,
+                      barrierColor: Colors.black.withValues(alpha: 0.3),
+                      builder: (context) => Dialog(
+                        backgroundColor: Colors.transparent,
+                        elevation: 0,
+                        insetPadding: const EdgeInsets.symmetric(horizontal: 20),
+                        child: NoteMenu(
+                          onViewList: _onViewList,
+                          onSort: _onSort,
+                          onSync: _onSync,
+                          onImport: () {},
                         ),
                       ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.delete, color: Colors.white),
-                      onPressed: _deleteSelectedNotes,
-                      tooltip: 'Eliminar seleccionadas',
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.close, color: Colors.white),
-                      onPressed: _exitSelectionMode,
-                      tooltip: 'Cancelar selección',
-                    ),
-                  ],
+                    );
+                  },
                 ),
-              ),
-            
-            const SizedBox(height: 8),
-            
-            Expanded(
-              child: RefreshIndicator(
-                onRefresh: _loadNotesFromProvider,
-                color: Colors.blue,
-                backgroundColor: Colors.white,
-                displacement: 40,
-                child: _isLoading
-                    ? const Center(
-                        child: CircularProgressIndicator(
-                          color: Colors.blue,
-                          strokeWidth: 3,
+                
+                if (_isSelectionMode)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    color: Colors.blue,
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            '${_selectedNoteIds.length} notas seleccionadas',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                         ),
-                      )
-                    : _notes.isEmpty
-                        ? EmptyNotesWidget(
-                            onCreateNote: () async {
-                              final result = await Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => const NoteFormScreen(),
-                                ),
-                              );
-                              if (result == true && mounted) {
-                                _loadNotesFromProvider();
-                              }
-                            },
+                        IconButton(
+                          icon: const Icon(Icons.delete, color: Colors.white),
+                          onPressed: () => _deleteSelectedNotes(noteProvider),
+                          tooltip: 'Eliminar seleccionadas',
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close, color: Colors.white),
+                          onPressed: _exitSelectionMode,
+                          tooltip: 'Cancelar selección',
+                        ),
+                      ],
+                    ),
+                  ),
+                
+                const SizedBox(height: 8),
+                
+                Expanded(
+                  child: RefreshIndicator(
+                    onRefresh: _syncNotes,
+                    color: Colors.blue,
+                    backgroundColor: Colors.white,
+                    displacement: 40,
+                    child: _isLoading
+                        ? const Center(
+                            child: CircularProgressIndicator(
+                              color: Colors.blue,
+                              strokeWidth: 3,
+                            ),
                           )
-                        : _buildNotesList(isDarkMode),
-              ),
-            ),
-          ],
+                        : notes.isEmpty
+                            ? SingleChildScrollView(
+                                physics: const AlwaysScrollableScrollPhysics(),
+                                child: SizedBox(
+                                  height: MediaQuery.of(context).size.height * 0.6,
+                                  child: EmptyNotesWidget(
+                                    onCreateNote: () async {
+                                      final result = await Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) => const NoteFormScreen(),
+                                        ),
+                                      );
+                                      if (result == true && mounted) {
+                                        await noteProvider.loadNotes();
+                                      }
+                                    },
+                                  ),
+                                ),
+                              )
+                            : _buildNotesList(notes, isDarkMode),
+                  ),
+                ),
+              ],
+            );
+          },
         ),
       ),
     );
   }
 
-  Widget _buildNotesList(bool isDarkMode) {
-    // Filtrar notas según la categoría seleccionada (etiqueta)
+  Widget _buildNotesList(List<Note> notes, bool isDarkMode) {
     final filteredNotes = _selectedCategory == 'Todas'
-        ? _notes
-        : _notes.where((note) => note.tags.contains(_selectedCategory)).toList();
+        ? notes
+        : notes.where((note) => note.tags.contains(_selectedCategory)).toList();
     
     final sortedNotes = _sortNotes(filteredNotes);
 

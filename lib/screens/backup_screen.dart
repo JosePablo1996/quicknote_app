@@ -32,7 +32,7 @@ class _BackupScreenState extends State<BackupScreen> with TickerProviderStateMix
   late AnimationController _backupAnimationController;
   late AnimationController _restoreAnimationController;
 
-  List<BackupFileInfo> _backupFiles = [];
+  final List<BackupFileInfo> _backupFiles = [];
   List<BackupHistory> _backupHistory = [];
   bool _isLoadingFiles = false;
   
@@ -871,7 +871,7 @@ class _BackupScreenState extends State<BackupScreen> with TickerProviderStateMix
                     Switch(
                       value: _autoBackupEnabled,
                       onChanged: _toggleAutoBackup,
-                      activeColor: Colors.purple,
+                      activeThumbColor: Colors.purple,
                     ),
                   ],
                 ),
@@ -1270,12 +1270,12 @@ class _BackupScreenState extends State<BackupScreen> with TickerProviderStateMix
           mainAxisSize: MainAxisSize.min,
           children: [
             IconButton(
-              icon: Icon(Icons.restore, color: Colors.green, size: 22),
+              icon: const Icon(Icons.restore, color: Colors.green, size: 22),
               onPressed: info.noteCount > 0 && !_isRestoring ? () => _performRestore(backupInfo: info) : null,
               tooltip: 'Restaurar',
             ),
             IconButton(
-              icon: Icon(Icons.delete, color: Colors.red, size: 22),
+              icon: const Icon(Icons.delete, color: Colors.red, size: 22),
               onPressed: _isDeleting ? null : () => _deleteBackup(info),
               tooltip: 'Eliminar',
             ),
